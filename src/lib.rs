@@ -132,7 +132,7 @@ pub struct WeightedConfig {
     pub weight_a: f32,
     /// Weight for second list (default: 0.5).
     pub weight_b: f32,
-    /// Normalize scores to [0,1] before combining (default: true).
+    /// Normalize scores to `[0,1]` before combining (default: true).
     pub normalize: bool,
     /// Maximum results to return (None = all).
     pub top_k: Option<usize>,
