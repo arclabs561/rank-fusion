@@ -3,8 +3,8 @@
 //! These tests verify rank fusion works correctly in real-world scenarios.
 
 use rank_fusion::{
-    borda, combmnz, combmnz_multi, combsum, rrf, rrf_into,
-    rrf_multi, weighted, weighted_multi, FusionConfig, RrfConfig, WeightedConfig,
+    borda, combmnz, combmnz_multi, combsum, rrf, rrf_into, rrf_multi, weighted, weighted_multi,
+    FusionConfig, RrfConfig, WeightedConfig,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,7 +33,10 @@ fn e2e_hybrid_bm25_dense() {
     let fused = rrf(bm25.clone(), dense.clone(), RrfConfig::default());
 
     // doc_rust appears in both lists at top positions
-    assert_eq!(fused[0].0, "doc_rust", "doc_rust should be #1 (in both lists at top)");
+    assert_eq!(
+        fused[0].0, "doc_rust",
+        "doc_rust should be #1 (in both lists at top)"
+    );
 
     // Should include all unique docs
     let unique_docs: std::collections::HashSet<_> = fused.iter().map(|(id, _)| *id).collect();
@@ -100,8 +103,12 @@ fn e2e_buffer_reuse() {
 
     // Simulate processing many queries with integer IDs
     for i in 0..10u32 {
-        let list_a: Vec<(u32, f32)> = (0..20u32).map(|j| (i * 100 + j, 1.0 - j as f32 * 0.05)).collect();
-        let list_b: Vec<(u32, f32)> = (10..30u32).map(|j| (i * 100 + j, 0.9 - (j - 10) as f32 * 0.05)).collect();
+        let list_a: Vec<(u32, f32)> = (0..20u32)
+            .map(|j| (i * 100 + j, 1.0 - j as f32 * 0.05))
+            .collect();
+        let list_b: Vec<(u32, f32)> = (10..30u32)
+            .map(|j| (i * 100 + j, 0.9 - (j - 10) as f32 * 0.05))
+            .collect();
 
         rrf_into(&list_a, &list_b, RrfConfig::default(), &mut output_buffer);
 
@@ -124,8 +131,16 @@ fn e2e_combmnz_overlap_bonus() {
     let combmnz_result = combmnz(&list_a, &list_b);
 
     // doc1 appears in both, so CombMNZ should give it higher relative score
-    let doc1_combsum = combsum_result.iter().find(|(id, _)| *id == "doc1").unwrap().1;
-    let doc1_combmnz = combmnz_result.iter().find(|(id, _)| *id == "doc1").unwrap().1;
+    let doc1_combsum = combsum_result
+        .iter()
+        .find(|(id, _)| *id == "doc1")
+        .unwrap()
+        .1;
+    let doc1_combmnz = combmnz_result
+        .iter()
+        .find(|(id, _)| *id == "doc1")
+        .unwrap()
+        .1;
 
     // CombMNZ multiplies by overlap count (2), so should be ~2x
     assert!(
@@ -174,11 +189,18 @@ fn e2e_empty_lists() {
 
     // RRF with one empty list
     let fused = rrf(populated.clone(), empty.clone(), RrfConfig::default());
-    assert_eq!(fused.len(), 2, "Should include all docs from non-empty list");
+    assert_eq!(
+        fused.len(),
+        2,
+        "Should include all docs from non-empty list"
+    );
 
     // Both empty
     let both_empty = rrf(empty.clone(), empty, RrfConfig::default());
-    assert!(both_empty.is_empty(), "Empty inputs should produce empty output");
+    assert!(
+        both_empty.is_empty(),
+        "Empty inputs should produce empty output"
+    );
 
     // CombSUM with empty
     let combsum_result = combsum(&populated, &[]);
@@ -209,8 +231,12 @@ fn e2e_integer_ids() {
 
 #[test]
 fn e2e_top_k_filtering() {
-    let list_a: Vec<_> = (0..50).map(|i| (format!("d{}", i), 1.0 - i as f32 * 0.02)).collect();
-    let list_b: Vec<_> = (25..75).map(|i| (format!("d{}", i), 0.9 - (i - 25) as f32 * 0.02)).collect();
+    let list_a: Vec<_> = (0..50)
+        .map(|i| (format!("d{}", i), 1.0 - i as f32 * 0.02))
+        .collect();
+    let list_b: Vec<_> = (25..75)
+        .map(|i| (format!("d{}", i), 0.9 - (i - 25) as f32 * 0.02))
+        .collect();
 
     let list_a_ref: Vec<_> = list_a.iter().map(|(id, s)| (id.as_str(), *s)).collect();
     let list_b_ref: Vec<_> = list_b.iter().map(|(id, s)| (id.as_str(), *s)).collect();
@@ -244,7 +270,10 @@ fn e2e_deterministic() {
         );
         for ((id1, score1), (id2, score2)) in results[0].iter().zip(result.iter()) {
             assert_eq!(id1, id2, "IDs should be deterministic");
-            assert!((score1 - score2).abs() < 1e-6, "Scores should be deterministic");
+            assert!(
+                (score1 - score2).abs() < 1e-6,
+                "Scores should be deterministic"
+            );
         }
     }
 }
@@ -267,7 +296,10 @@ fn e2e_borda_ordering() {
     // Borda scores: doc1 = (3-0) + (3-0) = 6
     //               doc2 = (3-1) + (3-2) = 3
     let doc1_score = fused.iter().find(|(id, _)| *id == "doc1").unwrap().1;
-    assert!((doc1_score - 6.0).abs() < 0.01, "doc1 Borda score should be 6");
+    assert!(
+        (doc1_score - 6.0).abs() < 0.01,
+        "doc1 Borda score should be 6"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -286,4 +318,3 @@ fn e2e_weighted_multi_errors() {
     let result = weighted_multi(&[(&list, 1.0), (&list, 1.0)], true, None);
     assert!(result.is_ok(), "Valid weights should succeed");
 }
-

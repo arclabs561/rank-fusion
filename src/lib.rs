@@ -456,11 +456,7 @@ where
 ///
 /// Returns [`FusionError::ZeroWeights`] if weights sum to zero.
 #[allow(clippy::cast_precision_loss)]
-pub fn rrf_weighted<I, L>(
-    lists: &[L],
-    weights: &[f32],
-    config: RrfConfig,
-) -> Result<Vec<(I, f32)>>
+pub fn rrf_weighted<I, L>(lists: &[L], weights: &[f32], config: RrfConfig) -> Result<Vec<(I, f32)>>
 where
     I: Clone + Eq + Hash,
     L: AsRef<[(I, f32)]>,
@@ -476,8 +472,7 @@ where
     for (list, &weight) in lists.iter().zip(weights.iter()) {
         let normalized_weight = weight / weight_sum;
         for (rank, (id, _)) in list.as_ref().iter().enumerate() {
-            *scores.entry(id.clone()).or_default() +=
-                normalized_weight / (k + rank as f32);
+            *scores.entry(id.clone()).or_default() += normalized_weight / (k + rank as f32);
         }
     }
 
@@ -829,7 +824,10 @@ mod tests {
         // d2: 0.75 / 60 = 0.0125
         let d1_score = f.iter().find(|(id, _)| *id == "d1").unwrap().1;
         let d2_score = f.iter().find(|(id, _)| *id == "d2").unwrap().1;
-        assert!(d2_score > d1_score * 2.0, "d2 should score ~3x higher than d1");
+        assert!(
+            d2_score > d1_score * 2.0,
+            "d2 should score ~3x higher than d1"
+        );
     }
 
     #[test]
@@ -1509,7 +1507,7 @@ mod proptests {
             let empty: Vec<(u32, f32)> = vec![];
 
             let rrf_result = rrf(a.clone(), empty, RrfConfig::default());
-            
+
             // Should have same number of unique IDs
             prop_assert_eq!(rrf_result.len(), n);
 
