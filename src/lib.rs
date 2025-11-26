@@ -209,8 +209,16 @@ pub fn weighted<I: Clone + Eq + Hash>(
     results_b: &[(I, f32)],
     config: WeightedConfig,
 ) -> Vec<(I, f32)> {
-    let (norm_a, off_a) = if config.normalize { min_max_params(results_a) } else { (1.0, 0.0) };
-    let (norm_b, off_b) = if config.normalize { min_max_params(results_b) } else { (1.0, 0.0) };
+    let (norm_a, off_a) = if config.normalize {
+        min_max_params(results_a)
+    } else {
+        (1.0, 0.0)
+    };
+    let (norm_b, off_b) = if config.normalize {
+        min_max_params(results_b)
+    } else {
+        (1.0, 0.0)
+    };
 
     let total = config.weight_a + config.weight_b;
     let wa = config.weight_a / total;
@@ -307,9 +315,11 @@ fn min_max_params<I>(results: &[(I, f32)]) -> (f32, f32) {
     if results.is_empty() {
         return (1.0, 0.0);
     }
-    let (min, max) = results.iter().fold((f32::INFINITY, f32::NEG_INFINITY), |(lo, hi), (_, s)| {
-        (lo.min(*s), hi.max(*s))
-    });
+    let (min, max) = results
+        .iter()
+        .fold((f32::INFINITY, f32::NEG_INFINITY), |(lo, hi), (_, s)| {
+            (lo.min(*s), hi.max(*s))
+        });
     let range = max - min;
     if range < 1e-9 {
         (1.0, min)
@@ -377,11 +387,11 @@ mod tests {
 
     #[test]
     fn combsum_basic() {
-        let a = vec![("d1", 1.0), ("d2", 0.5)];
+        let a = vec![("d1", 0.5), ("d2", 1.0)];
         let b = vec![("d2", 1.0), ("d3", 0.5)];
         let f = combsum(&a, &b);
 
-        // d2 appears in both with high scores
+        // d2 appears in both with top scores in each list
         assert_eq!(f[0].0, "d2");
     }
 
@@ -428,14 +438,20 @@ mod tests {
         let empty: Vec<(&str, f32)> = vec![];
         let non_empty = ranked(&["d1"]);
 
-        assert_eq!(rrf(empty.clone(), non_empty.clone(), RrfConfig::default()).len(), 1);
+        assert_eq!(
+            rrf(empty.clone(), non_empty.clone(), RrfConfig::default()).len(),
+            1
+        );
         assert_eq!(rrf(non_empty, empty, RrfConfig::default()).len(), 1);
     }
 
     #[test]
     fn both_empty() {
         let empty: Vec<(&str, f32)> = vec![];
-        assert_eq!(rrf(empty.clone(), empty.clone(), RrfConfig::default()).len(), 0);
+        assert_eq!(
+            rrf(empty.clone(), empty.clone(), RrfConfig::default()).len(),
+            0
+        );
         assert_eq!(combsum(&empty, &empty).len(), 0);
         assert_eq!(borda(&empty, &empty).len(), 0);
     }
@@ -451,5 +467,112 @@ mod tests {
         // Should get 1/60 + 1/61
         let expected = 1.0 / 60.0 + 1.0 / 61.0;
         assert!((f[0].1 - expected).abs() < 1e-6);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Property Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn arb_results(max_len: usize) -> impl Strategy<Value = Vec<(u32, f32)>> {
+        proptest::collection::vec((0u32..100, 0.0f32..1.0), 0..max_len)
+    }
+
+    proptest! {
+        /// RRF output length is at most sum of input lengths (union of IDs)
+        #[test]
+        fn rrf_output_bounded(a in arb_results(50), b in arb_results(50)) {
+            let result = rrf(a.clone(), b.clone(), RrfConfig::default());
+            prop_assert!(result.len() <= a.len() + b.len());
+        }
+
+        /// RRF scores are always positive (1/(k+rank) > 0 for all k, rank >= 0)
+        #[test]
+        fn rrf_scores_positive(a in arb_results(50), b in arb_results(50)) {
+            let result = rrf(a, b, RrfConfig::default());
+            for (_, score) in &result {
+                prop_assert!(*score > 0.0, "RRF score should be positive");
+            }
+        }
+
+        /// RRF is commutative: rrf(a, b) == rrf(b, a) (same items, approximately same scores)
+        #[test]
+        fn rrf_commutative(a in arb_results(20), b in arb_results(20)) {
+            let ab = rrf(a.clone(), b.clone(), RrfConfig::default());
+            let ba = rrf(b, a, RrfConfig::default());
+
+            prop_assert_eq!(ab.len(), ba.len());
+
+            // Same items with approximately same scores (floating point tolerance)
+            let ab_map: HashMap<_, _> = ab.into_iter().collect();
+            let ba_map: HashMap<_, _> = ba.into_iter().collect();
+
+            for (id, score_ab) in &ab_map {
+                let score_ba = ba_map.get(id).expect("same keys");
+                prop_assert!(
+                    (score_ab - score_ba).abs() < 1e-6,
+                    "Scores should match: {} vs {}",
+                    score_ab,
+                    score_ba
+                );
+            }
+        }
+
+        /// RRF results are sorted by descending score
+        #[test]
+        fn rrf_sorted_descending(a in arb_results(50), b in arb_results(50)) {
+            let result = rrf(a, b, RrfConfig::default());
+            for window in result.windows(2) {
+                prop_assert!(window[0].1 >= window[1].1, "Results should be sorted descending");
+            }
+        }
+
+        /// Borda is commutative
+        #[test]
+        fn borda_commutative(a in arb_results(20), b in arb_results(20)) {
+            let ab = borda(&a, &b);
+            let ba = borda(&b, &a);
+
+            let ab_map: HashMap<_, _> = ab.into_iter().collect();
+            let ba_map: HashMap<_, _> = ba.into_iter().collect();
+            prop_assert_eq!(ab_map, ba_map);
+        }
+
+        /// CombSUM is commutative (with default equal weights)
+        #[test]
+        fn combsum_commutative(a in arb_results(20), b in arb_results(20)) {
+            let ab = combsum(&a, &b);
+            let ba = combsum(&b, &a);
+
+            let ab_map: HashMap<_, _> = ab.into_iter().collect();
+            let ba_map: HashMap<_, _> = ba.into_iter().collect();
+
+            // Check same keys
+            prop_assert_eq!(ab_map.len(), ba_map.len());
+            for (id, score_ab) in &ab_map {
+                let score_ba = ba_map.get(id).unwrap();
+                prop_assert!((score_ab - score_ba).abs() < 1e-5);
+            }
+        }
+
+        /// Higher k in RRF means more uniform scores
+        #[test]
+        fn rrf_k_uniformity(a in arb_results(10).prop_filter("need items", |v| v.len() >= 2)) {
+            let b: Vec<(u32, f32)> = vec![];
+
+            let low_k = rrf(a.clone(), b.clone(), RrfConfig::new(1));
+            let high_k = rrf(a, b, RrfConfig::new(1000));
+
+            if low_k.len() >= 2 && high_k.len() >= 2 {
+                let low_k_range = low_k[0].1 - low_k[low_k.len()-1].1;
+                let high_k_range = high_k[0].1 - high_k[high_k.len()-1].1;
+                prop_assert!(high_k_range <= low_k_range, "Higher k should give more uniform scores");
+            }
+        }
     }
 }
