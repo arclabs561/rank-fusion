@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.13] - 2025-11-26
+
+### Changed
+- Added "Why This Library?" section to README with Bruch et al. (2022) citation
+- Documented architectural benefits of dedicated fusion library
+
 ## [0.1.12] - 2025-11-26
 
 ### Changed

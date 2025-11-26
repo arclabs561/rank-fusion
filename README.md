@@ -7,6 +7,19 @@ Rank fusion for hybrid search — combine results from multiple retrievers.
 [![Docs](https://docs.rs/rank-fusion/badge.svg)](https://docs.rs/rank-fusion)
 [![MSRV](https://img.shields.io/badge/MSRV-1.74-blue)](https://blog.rust-lang.org/2023/11/16/Rust-1.74.0.html)
 
+## Why This Library?
+
+Hybrid search (BM25 + dense) consistently outperforms single-method retrieval.
+From [Bruch et al. (2022)](https://arxiv.org/abs/2210.11934):
+
+> "We study hybrid search in text retrieval where lexical and semantic search are
+> fused together with the intuition that the two are complementary."
+
+A dedicated fusion library lets you:
+- **Zero dependencies**: Pure Rust, no runtime overhead
+- **Algorithm flexibility**: RRF, CombMNZ, Borda, Weighted — swap easily
+- **Database agnostic**: Works with any retriever's output
+
 ## When to Use Rank Fusion
 
 Hybrid search combines multiple retrieval strategies (e.g., BM25 + dense vectors).

@@ -62,3 +62,4 @@ fn main() {
         println!("  {id}: {score:.4}");
     }
 }
+
