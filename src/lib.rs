@@ -1,29 +1,20 @@
-//! # rank-fusion
-//!
-//! Rank fusion algorithms for hybrid search systems.
-//!
-//! This crate provides implementations of common rank fusion algorithms used
-//! to combine results from multiple retrieval systems (e.g., BM25 + dense
-//! vectors in RAG applications).
-//!
-//! ## Algorithms
-//!
-//! - **RRF** — Reciprocal Rank Fusion, robust to score distribution differences
-//! - **CombSUM** / **CombMNZ** — Score-based combination with overlap rewards
-//! - **Borda** — Rank-based voting
-//! - **Weighted** — Configurable score weighting with normalization
-//!
-//! ## Example
+//! Rank fusion for combining retrieval results.
 //!
 //! ```rust
 //! use rank_fusion::{rrf, RrfConfig};
 //!
-//! let sparse = vec![("doc1", 0.9), ("doc2", 0.7), ("doc3", 0.5)];
-//! let dense = vec![("doc2", 0.85), ("doc4", 0.6), ("doc1", 0.4)];
-//!
-//! let fused = rrf(sparse, dense, RrfConfig::default());
-//! assert_eq!(fused[0].0, "doc2"); // appears in both lists
+//! let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+//! let dense = vec![("d2", 0.9), ("d3", 0.8)];
+//! let fused = rrf(bm25, dense, RrfConfig::default());
 //! ```
+//!
+//! ## Functions
+//!
+//! - [`rrf`] — Reciprocal Rank Fusion (ignores scores, uses rank)
+//! - [`combsum`] — Sum of normalized scores
+//! - [`combmnz`] — Sum × overlap count
+//! - [`borda`] — Borda count
+//! - [`weighted`] — Weighted combination
 
 use std::collections::HashMap;
 use std::hash::Hash;
