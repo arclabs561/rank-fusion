@@ -431,6 +431,59 @@ where
     finalize(scores, config.top_k)
 }
 
+/// Weighted RRF: per-retriever weights applied to rank-based scores.
+///
+/// Unlike standard RRF which treats all lists equally, weighted RRF allows
+/// assigning different importance to different retrievers based on domain
+/// knowledge or tuning.
+///
+/// Formula: `score(d) = Σ w_i / (k + rank_i(d))`
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::{rrf_weighted, RrfConfig};
+///
+/// let bm25 = vec![("d1", 0.0), ("d2", 0.0)];   // scores ignored
+/// let dense = vec![("d2", 0.0), ("d3", 0.0)];
+///
+/// // Trust dense retriever 2x more than BM25
+/// let weights = [0.33, 0.67];
+/// let fused = rrf_weighted(&[&bm25[..], &dense[..]], &weights, RrfConfig::default());
+/// ```
+///
+/// # Errors
+///
+/// Returns [`FusionError::ZeroWeights`] if weights sum to zero.
+#[allow(clippy::cast_precision_loss)]
+pub fn rrf_weighted<I, L>(
+    lists: &[L],
+    weights: &[f32],
+    config: RrfConfig,
+) -> Result<Vec<(I, f32)>>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    let weight_sum: f32 = weights.iter().sum();
+    if weight_sum.abs() < 1e-9 {
+        return Err(FusionError::ZeroWeights);
+    }
+
+    let k = config.k as f32;
+    let mut scores: HashMap<I, f32> = HashMap::new();
+
+    for (list, &weight) in lists.iter().zip(weights.iter()) {
+        let normalized_weight = weight / weight_sum;
+        for (rank, (id, _)) in list.as_ref().iter().enumerate() {
+            *scores.entry(id.clone()).or_default() +=
+                normalized_weight / (k + rank as f32);
+        }
+    }
+
+    Ok(finalize(scores, config.top_k))
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Score-based Fusion
 // ─────────────────────────────────────────────────────────────────────────────
@@ -756,6 +809,37 @@ mod tests {
 
         let expected = 1.0 / 60.0;
         assert!((f[0].1 - expected).abs() < 1e-6);
+    }
+
+    #[test]
+    fn rrf_weighted_applies_weights() {
+        // d1 appears in list_a (rank 0), d2 appears in list_b (rank 0)
+        let list_a = vec![("d1", 0.0)];
+        let list_b = vec![("d2", 0.0)];
+
+        // Weight list_b 3x more than list_a
+        let weights = [0.25, 0.75];
+        let f = rrf_weighted(&[&list_a[..], &list_b[..]], &weights, RrfConfig::new(60)).unwrap();
+
+        // d2 should rank higher because its list has 3x the weight
+        assert_eq!(f[0].0, "d2", "weighted RRF should favor higher-weight list");
+
+        // Verify score formula: w / (k + rank)
+        // d1: 0.25 / 60 = 0.00417
+        // d2: 0.75 / 60 = 0.0125
+        let d1_score = f.iter().find(|(id, _)| *id == "d1").unwrap().1;
+        let d2_score = f.iter().find(|(id, _)| *id == "d2").unwrap().1;
+        assert!(d2_score > d1_score * 2.0, "d2 should score ~3x higher than d1");
+    }
+
+    #[test]
+    fn rrf_weighted_zero_weights_error() {
+        let list_a = vec![("d1", 0.0)];
+        let list_b = vec![("d2", 0.0)];
+        let weights = [0.0, 0.0];
+
+        let result = rrf_weighted(&[&list_a[..], &list_b[..]], &weights, RrfConfig::default());
+        assert!(matches!(result, Err(FusionError::ZeroWeights)));
     }
 
     #[test]

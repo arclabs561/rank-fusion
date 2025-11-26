@@ -23,15 +23,44 @@ Rank fusion solves this by combining **ranks** or **normalized scores**.
 ## Quick Start
 
 ```rust
-use rank_fusion::{rrf, RrfConfig};
+use rank_fusion::prelude::*;
 
-// Your retrieval results (ID, score) — any Eq + Hash type works for IDs
 let bm25 = vec![("doc1", 12.5), ("doc2", 11.2), ("doc3", 8.0)];
 let dense = vec![("doc2", 0.92), ("doc4", 0.85), ("doc1", 0.80)];
 
 // Fuse with RRF (ignores scores, uses ranks only)
 let fused = rrf(bm25, dense, RrfConfig::default());
 // doc2 appears in both → ranked highest
+```
+
+## Prelude
+
+Import common types with one line:
+
+```rust
+use rank_fusion::prelude::*;
+// Imports: rrf, combsum, combmnz, borda, weighted
+// Plus: FusionConfig, RrfConfig, WeightedConfig, FusionError, Result
+```
+
+## FusionMethod (Unified API)
+
+Use the `FusionMethod` enum for a unified dispatch interface:
+
+```rust
+use rank_fusion::FusionMethod;
+
+let sparse = vec![("d1", 10.0), ("d2", 8.0)];
+let dense = vec![("d2", 0.9), ("d3", 0.7)];
+
+// RRF
+let fused = FusionMethod::Rrf { k: 60 }.fuse(&sparse, &dense);
+
+// Weighted
+let fused = FusionMethod::Weighted { w1: 0.3, w2: 0.7 }.fuse(&sparse, &dense);
+
+// CombMNZ
+let fused = FusionMethod::CombMnz.fuse(&sparse, &dense);
 ```
 
 ## Algorithms

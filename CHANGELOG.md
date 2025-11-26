@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.11] - 2025-11-26
+
+### Added
+- `rrf_weighted` for per-retriever weighted rank fusion
+- Tests for weighted RRF formula and error handling
+
 ## [0.1.10] - 2025-11-26
 
 ### Added
