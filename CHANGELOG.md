@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.10] - 2025-11-26
+
+### Added
+- Mutation-killing unit tests for RRF, weighted, combsum, combmnz
+- Tests for exact score formulas and weight normalization
+
 ## [0.1.9] - 2025-11-26
 
 ### Changed

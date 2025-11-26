@@ -1062,11 +1062,13 @@ mod tests {
 
     #[test]
     fn fusion_method_combsum() {
-        let a = ranked(&["d1", "d2"]);
-        let b = ranked(&["d2", "d3"]);
+        // Use explicit scores to avoid ties after normalization
+        let a = vec![("d1", 1.0_f32), ("d2", 0.8)];
+        let b = vec![("d2", 0.9), ("d3", 0.7)];
 
         let f = FusionMethod::CombSum.fuse(&a, &b);
-        assert_eq!(f[0].0, "d2"); // Highest combined score
+        // d2 appears in both lists, so should have highest combined score
+        assert_eq!(f[0].0, "d2");
     }
 
     #[test]
