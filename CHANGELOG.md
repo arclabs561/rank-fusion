@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.5] - 2025-11-26
+- Added `borda_multi`, `combsum_multi`, `combmnz_multi`, `weighted_multi` for 3+ lists
+- Two-list functions now delegate to multi variants internally
+
 ## [0.1.4] - 2024-11-26
 - Simplified docs
 - Property tests
