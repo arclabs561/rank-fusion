@@ -679,6 +679,12 @@ fn sort_scored_desc<I>(results: &mut [(I, f32)]) {
 
 /// Returns (scale, offset) for min-max normalization: `(x - offset) * scale`.
 #[inline]
+/// Returns (norm_factor, offset) for min-max normalization.
+///
+/// Normalized score = (score - offset) * norm_factor
+///
+/// For single-element lists or lists where all scores are equal,
+/// returns (0.0, 0.0) so each element contributes its raw score.
 fn min_max_params<I>(results: &[(I, f32)]) -> (f32, f32) {
     if results.is_empty() {
         return (1.0, 0.0);
@@ -690,7 +696,8 @@ fn min_max_params<I>(results: &[(I, f32)]) -> (f32, f32) {
         });
     let range = max - min;
     if range < 1e-9 {
-        (1.0, min)
+        // All scores equal: just pass through the score (norm=1, offset=0)
+        (1.0, 0.0)
     } else {
         (1.0 / range, min)
     }
