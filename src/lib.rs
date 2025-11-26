@@ -791,7 +791,7 @@ mod tests {
     fn nan_scores_handled() {
         let a = vec![("d1", f32::NAN), ("d2", 0.5)];
         let b = vec![("d2", 0.9), ("d3", 0.1)];
-        
+
         // Should not panic
         let _ = rrf(a.clone(), b.clone(), RrfConfig::default());
         let _ = combsum(&a, &b);
@@ -803,7 +803,7 @@ mod tests {
     fn inf_scores_handled() {
         let a = vec![("d1", f32::INFINITY), ("d2", 0.5)];
         let b = vec![("d2", f32::NEG_INFINITY), ("d3", 0.1)];
-        
+
         // Should not panic
         let _ = rrf(a.clone(), b.clone(), RrfConfig::default());
         let _ = combsum(&a, &b);
@@ -813,7 +813,7 @@ mod tests {
     fn zero_scores() {
         let a = vec![("d1", 0.0), ("d2", 0.0)];
         let b = vec![("d2", 0.0), ("d3", 0.0)];
-        
+
         let f = combsum(&a, &b);
         assert_eq!(f.len(), 3);
     }
@@ -822,7 +822,7 @@ mod tests {
     fn negative_scores() {
         let a = vec![("d1", -1.0), ("d2", -0.5)];
         let b = vec![("d2", -0.9), ("d3", -0.1)];
-        
+
         let f = combsum(&a, &b);
         assert_eq!(f.len(), 3);
         // Should normalize properly
@@ -832,7 +832,7 @@ mod tests {
     fn large_k_value() {
         let a = ranked(&["d1", "d2"]);
         let b = ranked(&["d2", "d3"]);
-        
+
         // k = u32::MAX should not overflow
         let f = rrf(a, b, RrfConfig::new(u32::MAX));
         assert!(!f.is_empty());
@@ -842,13 +842,13 @@ mod tests {
     fn single_item_lists() {
         let a = vec![("d1", 1.0)];
         let b = vec![("d1", 1.0)];
-        
+
         let f = rrf(a.clone(), b.clone(), RrfConfig::default());
         assert_eq!(f.len(), 1);
-        
+
         let f = combsum(&a, &b);
         assert_eq!(f.len(), 1);
-        
+
         let f = borda(&a, &b);
         assert_eq!(f.len(), 1);
     }
@@ -857,10 +857,10 @@ mod tests {
     fn disjoint_lists() {
         let a = vec![("d1", 1.0), ("d2", 0.9)];
         let b = vec![("d3", 1.0), ("d4", 0.9)];
-        
+
         let f = rrf(a.clone(), b.clone(), RrfConfig::default());
         assert_eq!(f.len(), 4);
-        
+
         let f = combmnz(&a, &b);
         assert_eq!(f.len(), 4);
         // No overlap bonus
@@ -870,7 +870,7 @@ mod tests {
     fn identical_lists() {
         let a = ranked(&["d1", "d2", "d3"]);
         let b = ranked(&["d1", "d2", "d3"]);
-        
+
         let f = rrf(a.clone(), b.clone(), RrfConfig::default());
         // Order should be preserved
         assert_eq!(f[0].0, "d1");
@@ -882,7 +882,7 @@ mod tests {
     fn reversed_lists() {
         let a = ranked(&["d1", "d2", "d3"]);
         let b = ranked(&["d3", "d2", "d1"]);
-        
+
         let f = rrf(a, b, RrfConfig::default());
         // All items appear in both lists, so all have same total RRF score
         // d2 at rank 1 in both gets: 2 * 1/(60+1) = 2/61
@@ -897,7 +897,7 @@ mod tests {
     fn top_k_larger_than_result() {
         let a = ranked(&["d1"]);
         let b = ranked(&["d2"]);
-        
+
         let f = rrf(a, b, RrfConfig::default().with_top_k(100));
         assert_eq!(f.len(), 2);
     }
@@ -906,7 +906,7 @@ mod tests {
     fn top_k_zero() {
         let a = ranked(&["d1", "d2"]);
         let b = ranked(&["d2", "d3"]);
-        
+
         let f = rrf(a, b, RrfConfig::default().with_top_k(0));
         assert_eq!(f.len(), 0);
     }
@@ -1063,11 +1063,11 @@ mod proptests {
             let multi = rrf_multi(&[a.clone(), b.clone()], RrfConfig::default());
 
             prop_assert_eq!(two_list.len(), multi.len());
-            
+
             // Check same IDs with same scores (order may differ due to HashMap iteration)
             let two_map: HashMap<_, _> = two_list.into_iter().collect();
             let multi_map: HashMap<_, _> = multi.into_iter().collect();
-            
+
             for (id, score) in &two_map {
                 let multi_score = multi_map.get(id).expect("same ids");
                 prop_assert!((score - multi_score).abs() < 1e-6, "score mismatch for {:?}", id);
@@ -1090,4 +1090,3 @@ mod proptests {
         }
     }
 }
-
