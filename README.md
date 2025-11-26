@@ -1,37 +1,44 @@
 # rank-fusion
 
-Rank fusion for hybrid search — combine results from multiple retrievers.
+Rank fusion for hybrid search.
 
 [![CI](https://github.com/arclabs561/rank-fusion/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/rank-fusion/actions)
 [![Crates.io](https://img.shields.io/crates/v/rank-fusion.svg)](https://crates.io/crates/rank-fusion)
 [![Docs](https://docs.rs/rank-fusion/badge.svg)](https://docs.rs/rank-fusion)
 [![MSRV](https://img.shields.io/badge/MSRV-1.74-blue)](https://blog.rust-lang.org/2023/11/16/Rust-1.74.0.html)
 
-## Why This Library?
+## The Score Incompatibility Problem
 
-Hybrid search (BM25 + dense) consistently outperforms single-method retrieval.
-From [Bruch et al. (2022)](https://arxiv.org/abs/2210.11934):
+Hybrid search combines multiple retrievers. The problem: their scores are incompatible.
 
-> "We study hybrid search in text retrieval where lexical and semantic search are
-> fused together with the intuition that the two are complementary."
+```
+BM25:   "rust programming"  →  doc1: 15.2,  doc2: 12.1,  doc3: 8.5
+Dense:  "rust programming"  →  doc2: 0.92,  doc4: 0.85,  doc1: 0.80
+```
 
-A dedicated fusion library lets you:
-- **Zero dependencies**: Pure Rust, no runtime overhead
-- **Algorithm flexibility**: RRF, CombMNZ, Borda, Weighted — swap easily
-- **Database agnostic**: Works with any retriever's output
+BM25 scores are unbounded (0 to 20+). Cosine similarity is bounded (-1 to 1).
+You can't add 15.2 + 0.92 and get anything meaningful.
 
-## When to Use Rank Fusion
+**Naive approaches fail:**
+- Raw addition: BM25 dominates (larger numbers)
+- Min-max normalization: Outliers distort the scale
+- Z-score normalization: Assumes normal distribution (often wrong)
 
-Hybrid search combines multiple retrieval strategies (e.g., BM25 + dense vectors).
-The challenge: different retrievers produce incompatible score scales.
+## Why RRF Works
 
-| Retriever | Typical Score Range |
-|-----------|---------------------|
-| BM25/TF-IDF | 0 to 20+ (unbounded) |
-| Cosine similarity | -1 to 1 |
-| Dot product | varies wildly |
+Reciprocal Rank Fusion (Cormack et al., 2009) sidesteps scores entirely:
 
-Rank fusion solves this by combining **ranks** or **normalized scores**.
+```
+RRF(d) = Σ 1/(k + rank(d))
+```
+
+A document at rank 1 in both lists gets `1/(60+1) + 1/(60+1) = 0.033`.
+A document at rank 1 in one list and absent from another gets `1/(60+1) = 0.016`.
+
+RRF's advantages:
+- **Outlier resistant**: Scores don't matter, only ranks
+- **No scale assumptions**: Works across any retriever
+- **Rewards consensus**: Documents ranked highly in multiple lists rise to the top
 
 ## Quick Start
 
@@ -41,63 +48,41 @@ use rank_fusion::prelude::*;
 let bm25 = vec![("doc1", 12.5), ("doc2", 11.2), ("doc3", 8.0)];
 let dense = vec![("doc2", 0.92), ("doc4", 0.85), ("doc1", 0.80)];
 
-// Fuse with RRF (ignores scores, uses ranks only)
+// RRF ignores scores, uses ranks only
 let fused = rrf(bm25, dense, RrfConfig::default());
 // doc2 appears in both → ranked highest
 ```
 
-## Prelude
-
-Import common types with one line:
-
-```rust
-use rank_fusion::prelude::*;
-// Imports: rrf, combsum, combmnz, borda, weighted
-// Plus: FusionConfig, RrfConfig, WeightedConfig, FusionError, Result
-```
-
-## FusionMethod (Unified API)
-
-Use the `FusionMethod` enum for a unified dispatch interface:
-
-```rust
-use rank_fusion::FusionMethod;
-
-let sparse = vec![("d1", 10.0), ("d2", 8.0)];
-let dense = vec![("d2", 0.9), ("d3", 0.7)];
-
-// RRF
-let fused = FusionMethod::Rrf { k: 60 }.fuse(&sparse, &dense);
-
-// Weighted
-let fused = FusionMethod::Weighted { w1: 0.3, w2: 0.7 }.fuse(&sparse, &dense);
-
-// CombMNZ
-let fused = FusionMethod::CombMnz.fuse(&sparse, &dense);
-```
-
 ## Algorithms
 
-| Function | Method | Uses Scores | Best For |
-|----------|--------|-------------|----------|
-| `rrf` | Reciprocal Rank Fusion | No | Different score scales |
-| `rrf_weighted` | RRF with per-list weights | No | Heterogeneous retrievers |
-| `combsum` | Sum of normalized scores | Yes | Same scale, trust scores |
-| `combmnz` | Sum × overlap count | Yes | Reward multi-retriever agreement |
-| `borda` | Borda count | No | Simple voting |
-| `weighted` | Weighted combination | Yes | Trust one retriever more |
+| Function | Uses Scores | Best For |
+|----------|-------------|----------|
+| `rrf` | No | Incompatible score scales (default choice) |
+| `combsum` | Yes | Same-scale scores you trust |
+| `combmnz` | Yes | Reward multi-retriever agreement |
+| `borda` | No | Simple voting baseline |
+| `weighted` | Yes | When one retriever is clearly better |
 
 All have `*_multi` variants for 3+ lists.
 
-### RRF k Parameter Tuning
+## Choosing an Algorithm
 
-The `k` parameter controls score distribution (default: 60, from Cormack et al., 2009):
+**Start with RRF.** It's the safest default because it makes no assumptions about score distributions.
 
-| k Value | Effect | Use When |
-|---------|--------|----------|
-| 10-30 | Aggressive — top picks dominate | High confidence in retrievers |
-| 50-100 | Balanced (default) | General hybrid search |
-| 200+ | Conservative — rewards consensus | Diverse/experimental systems |
+Use score-based methods (`combsum`, `weighted`) only when:
+1. Your retrievers produce same-scale scores (e.g., two cosine similarity systems)
+2. You've validated that score magnitudes correlate with relevance
+3. You need fine-grained control over retriever contributions
+
+## RRF k Parameter
+
+The `k` parameter (default: 60) controls how quickly scores decay with rank:
+
+| k | Effect | Use When |
+|---|--------|----------|
+| 10-30 | Aggressive — top results dominate | High confidence in top-k |
+| 50-70 | Balanced | General hybrid search |
+| 100+ | Conservative — rewards consensus | Noisy or experimental retrievers |
 
 ```rust
 // Aggressive (trust top results)
@@ -105,78 +90,53 @@ let config = RrfConfig::new(20);
 
 // Conservative (reward agreement)
 let config = RrfConfig::new(100);
+```
 
-// Weighted RRF: trust dense 2x more than BM25
-let weights = [0.33, 0.67];
+## Weighted RRF
+
+When retrievers have known quality differences:
+
+```rust
+use rank_fusion::rrf_weighted;
+
+let weights = [0.3, 0.7];  // Trust dense 2x more
 let fused = rrf_weighted(&[&bm25, &dense], &weights, RrfConfig::default())?;
 ```
 
-## Complete E2E Example
+## Multi-List Fusion
+
+For 3+ retrievers (keyword, dense, sparse, ColBERT, etc.):
 
 ```rust
-use rank_fusion::{rrf, combmnz, weighted, RrfConfig, WeightedConfig};
+use rank_fusion::rrf_multi;
 
-fn main() {
-    // Simulated retrieval results from different sources
-    let bm25_results = vec![
-        ("doc_rust", 15.2),
-        ("doc_python", 12.1),
-        ("doc_go", 8.5),
-    ];
-    
-    let dense_results = vec![
-        ("doc_rust", 0.95),
-        ("doc_cpp", 0.88),
-        ("doc_python", 0.82),
-    ];
-    
-    let keyword_results = vec![
-        ("doc_rust", 3.0),
-        ("doc_java", 2.5),
-        ("doc_go", 2.0),
-    ];
-    
-    // Method 1: RRF (best for incompatible scales)
-    let rrf_fused = rrf(
-        bm25_results.clone(),
-        dense_results.clone(),
-        RrfConfig::default().with_top_k(5),
-    );
-    println!("RRF top result: {:?}", rrf_fused.first());
-    
-    // Method 2: CombMNZ (rewards overlap)
-    let combmnz_fused = combmnz(&bm25_results, &dense_results);
-    println!("CombMNZ top result: {:?}", combmnz_fused.first());
-    
-    // Method 3: Weighted (trust dense more)
-    let weighted_fused = weighted(
-        &bm25_results,
-        &dense_results,
-        WeightedConfig::new(0.3, 0.7), // 30% BM25, 70% dense
-    );
-    println!("Weighted top result: {:?}", weighted_fused.first());
-    
-    // Method 4: Multi-list fusion (3+ sources)
-    use rank_fusion::rrf_multi;
-    let all_lists = vec![bm25_results, dense_results, keyword_results];
-    let multi_fused = rrf_multi(&all_lists, RrfConfig::default());
-    println!("Multi RRF top result: {:?}", multi_fused.first());
-}
+let lists = vec![bm25_results, dense_results, sparse_results];
+let fused = rrf_multi(&lists, RrfConfig::default());
 ```
 
-## Choosing an Algorithm
+## FusionMethod (Unified API)
 
-| Scenario | Recommendation |
-|----------|----------------|
-| BM25 + dense vectors | `rrf` — ignores incompatible scales |
-| Same-scale scores, want overlap bonus | `combmnz` |
-| You know one retriever is better | `weighted` with tuned weights |
-| Simple, fast baseline | `borda` |
-| 3+ retrievers | `*_multi` variants |
+For runtime algorithm selection:
+
+```rust
+use rank_fusion::FusionMethod;
+
+let method = FusionMethod::Rrf { k: 60 };
+let fused = method.fuse(&sparse, &dense);
+
+// Or weighted
+let method = FusionMethod::Weighted { w1: 0.3, w2: 0.7 };
+let fused = method.fuse(&sparse, &dense);
+```
 
 ## Related
 
-- [`rank-refine`](https://crates.io/crates/rank-refine) — Reranking algorithms (Matryoshka, ColBERT, cross-encoder)
+- [`rank-refine`](https://crates.io/crates/rank-refine) — Reranking algorithms (ColBERT, MRL, cross-encoder)
+
+## References
+
+- Cormack, Clarke, Buettcher (2009). "Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods"
+- [OpenSearch: Introducing RRF for Hybrid Search](https://opensearch.org/blog/introducing-reciprocal-rank-fusion-hybrid-search/)
 
 ## License
 
