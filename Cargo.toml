@@ -1,0 +1,40 @@
+[package]
+name = "rerank"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Fast rank fusion algorithms for hybrid search (RRF, CombMNZ, Borda)"
+keywords = ["search", "ranking", "fusion", "rrf", "rerank"]
+categories = ["algorithms", "data-structures"]
+repository = "https://github.com/arclabs561/rerank"
+readme = "README.md"
+authors = ["Arc <attobop@gmail.com>"]
+
+[features]
+default = ["std"]
+std = []
+# no_std support with alloc
+alloc = []
+
+[dependencies]
+# No dependencies for core functionality
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8"
+proptest = "1.4"
+
+[[bench]]
+name = "fusion_bench"
+harness = false
+
+[profile.bench]
+lto = "thin"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
