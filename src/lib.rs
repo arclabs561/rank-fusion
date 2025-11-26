@@ -1,4 +1,6 @@
-//! Rank fusion for combining retrieval results.
+//! Rank fusion for hybrid search.
+//!
+//! Combine results from multiple retrievers (BM25, dense, sparse) into a single ranking.
 //!
 //! ```rust
 //! use rank_fusion::{rrf, RrfConfig};
@@ -6,28 +8,20 @@
 //! let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
 //! let dense = vec![("d2", 0.9), ("d3", 0.8)];
 //! let fused = rrf(bm25, dense, RrfConfig::default());
+//! // d2 ranks highest (appears in both lists)
 //! ```
 //!
-//! ## Two-List Functions
+//! # Algorithms
 //!
-//! - [`rrf`] — Reciprocal Rank Fusion (ignores scores, uses rank)
-//! - [`combsum`] — Sum of normalized scores
-//! - [`combmnz`] — Sum × overlap count
-//! - [`borda`] — Borda count
-//! - [`weighted`] — Weighted combination
+//! | Function | Uses Scores | Best For |
+//! |----------|-------------|----------|
+//! | [`rrf`] | No | Incompatible score scales |
+//! | [`combsum`] | Yes | Similar scales, trust scores |
+//! | [`combmnz`] | Yes | Reward overlap between lists |
+//! | [`borda`] | No | Simple voting |
+//! | [`weighted`] | Yes | Custom retriever weights |
 //!
-//! ## Multi-List Functions
-//!
-//! - [`rrf_multi`], [`combsum_multi`], [`combmnz_multi`], [`borda_multi`], [`weighted_multi`]
-//!
-//! ## Choosing an Algorithm
-//!
-//! | Scenario | Recommended |
-//! |----------|-------------|
-//! | Different score scales (BM25 + cosine) | `rrf` — ignores scores |
-//! | Same score scale, reward overlap | `combmnz` |
-//! | Trust one retriever more | `weighted` |
-//! | Simple voting | `borda` |
+//! All have `*_multi` variants for 3+ lists.
 
 use std::collections::HashMap;
 use std::hash::Hash;

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.9] - 2025-11-26
+
+### Changed
+- Simplified module documentation
+- Cleaner algorithm comparison table
+
 ## [0.1.8] - 2025-11-26
 
 ### Added
