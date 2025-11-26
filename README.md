@@ -2,6 +2,7 @@
 
 Rank fusion for hybrid search.
 
+[![CI](https://github.com/arclabs561/rank-fusion/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/rank-fusion/actions)
 [![Crates.io](https://img.shields.io/crates/v/rank-fusion.svg)](https://crates.io/crates/rank-fusion)
 [![Docs](https://docs.rs/rank-fusion/badge.svg)](https://docs.rs/rank-fusion)
 
