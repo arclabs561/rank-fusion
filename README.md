@@ -5,6 +5,7 @@ Rank fusion for hybrid search.
 [![CI](https://github.com/arclabs561/rank-fusion/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/rank-fusion/actions)
 [![Crates.io](https://img.shields.io/crates/v/rank-fusion.svg)](https://crates.io/crates/rank-fusion)
 [![Docs](https://docs.rs/rank-fusion/badge.svg)](https://docs.rs/rank-fusion)
+[![MSRV](https://img.shields.io/badge/MSRV-1.70-blue)](https://blog.rust-lang.org/2023/06/01/Rust-1.70.0.html)
 
 ```rust
 use rank_fusion::{rrf, RrfConfig};
@@ -25,6 +26,10 @@ let fused = rrf(bm25, dense, RrfConfig::default());
 | `weighted` | Weighted combination | Yes |
 
 All have `*_multi` variants for 3+ lists.
+
+## Related
+
+See [`rank-refine`](https://crates.io/crates/rank-refine) for reranking (Matryoshka, ColBERT, cross-encoder).
 
 ## License
 

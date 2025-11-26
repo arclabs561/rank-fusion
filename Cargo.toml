@@ -1,7 +1,8 @@
 [package]
 name = "rank-fusion"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
+rust-version = "1.70"
 license = "MIT OR Apache-2.0"
 description = "Fast rank fusion for hybrid search — RRF, CombMNZ, Borda, Weighted"
 keywords = ["search", "ranking", "fusion", "rrf", "hybrid"]

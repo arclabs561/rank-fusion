@@ -201,34 +201,6 @@ impl FusionConfig {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Newtype for Type Safety
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// A ranked result list. Newtype for clarity in function signatures.
-///
-/// The inner slice contains `(id, score)` pairs, sorted by descending score.
-#[derive(Debug, Clone, Copy)]
-pub struct RankedList<'a, I>(pub &'a [(I, f32)]);
-
-impl<'a, I> AsRef<[(I, f32)]> for RankedList<'a, I> {
-    fn as_ref(&self) -> &[(I, f32)] {
-        self.0
-    }
-}
-
-impl<'a, I> From<&'a [(I, f32)]> for RankedList<'a, I> {
-    fn from(slice: &'a [(I, f32)]) -> Self {
-        Self(slice)
-    }
-}
-
-impl<'a, I> From<&'a Vec<(I, f32)>> for RankedList<'a, I> {
-    fn from(vec: &'a Vec<(I, f32)>) -> Self {
-        Self(vec.as_slice())
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // RRF (Reciprocal Rank Fusion)
 // ─────────────────────────────────────────────────────────────────────────────
 
