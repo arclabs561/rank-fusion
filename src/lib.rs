@@ -1069,12 +1069,19 @@ mod tests {
 
     #[test]
     fn fusion_method_combsum() {
-        // Use explicit scores to avoid ties after normalization
-        let a = vec![("d1", 1.0_f32), ("d2", 0.8)];
-        let b = vec![("d2", 0.9), ("d3", 0.7)];
+        // Use scores where d2 clearly wins after normalization
+        // a: d1=1.0 (norm: 1.0), d2=0.5 (norm: 0.0)
+        // b: d2=1.0 (norm: 1.0), d3=0.5 (norm: 0.0)
+        // Final: d1=1.0, d2=1.0, d3=0.0 - still a tie!
+        // Use 3 elements to break the tie:
+        let a = vec![("d1", 1.0_f32), ("d2", 0.6), ("d4", 0.2)];
+        let b = vec![("d2", 1.0_f32), ("d3", 0.5)];
+        // a norms: d1=(1.0-0.2)/0.8=1.0, d2=(0.6-0.2)/0.8=0.5, d4=0.0
+        // b norms: d2=(1.0-0.5)/0.5=1.0, d3=0.0
+        // Final: d1=1.0, d2=0.5+1.0=1.5, d3=0.0, d4=0.0
 
         let f = FusionMethod::CombSum.fuse(&a, &b);
-        // d2 appears in both lists, so should have highest combined score
+        // d2 appears in both lists with high scores, should win
         assert_eq!(f[0].0, "d2");
     }
 
