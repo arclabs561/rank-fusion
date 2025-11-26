@@ -1,14 +1,14 @@
 //! # rank-fusion
 //!
-//! Fast rank fusion algorithms for hybrid search systems.
+//! Rank fusion algorithms for hybrid search systems.
 //!
-//! This crate provides zero-dependency implementations of common rank fusion
-//! algorithms used to combine results from multiple retrieval systems (e.g.,
-//! BM25 + dense vectors in RAG applications).
+//! This crate provides implementations of common rank fusion algorithms used
+//! to combine results from multiple retrieval systems (e.g., BM25 + dense
+//! vectors in RAG applications).
 //!
 //! ## Algorithms
 //!
-//! - **RRF** — Reciprocal Rank Fusion, parameter-free and robust
+//! - **RRF** — Reciprocal Rank Fusion, robust to score distribution differences
 //! - **CombSUM** / **CombMNZ** — Score-based combination with overlap rewards
 //! - **Borda** — Rank-based voting
 //! - **Weighted** — Configurable score weighting with normalization
@@ -24,11 +24,6 @@
 //! let fused = rrf(sparse, dense, RrfConfig::default());
 //! assert_eq!(fused[0].0, "doc2"); // appears in both lists
 //! ```
-//!
-//! ## Performance
-//!
-//! Benchmarked at 7–10 million elements/second for typical workloads.
-//! Use `rrf_into` for zero-allocation hot paths.
 
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -42,8 +37,9 @@ use std::hash::Hash;
 pub struct RrfConfig {
     /// Smoothing constant (default: 60).
     ///
+    /// Controls how much rank position affects the score:
     /// - `k=60` — Standard RRF, works well for most cases
-    /// - `k=1` — Top positions dominate
+    /// - `k=1` — Top positions dominate heavily
     /// - `k=100+` — More uniform contribution across ranks
     pub k: u32,
 }
@@ -111,7 +107,9 @@ impl WeightedConfig {
 
 /// Reciprocal Rank Fusion of two result lists.
 ///
-/// Formula: `score(d) = Σ 1/(k + rank)`
+/// Formula: `score(d) = Σ 1/(k + rank)` where rank is 0-indexed.
+///
+/// For the first item (rank=0) with k=60, contribution is 1/60 ≈ 0.0167.
 ///
 /// RRF is robust to score distribution differences between retrievers.
 /// The original scores are ignored; only rank position matters.
@@ -138,10 +136,10 @@ where
     let mut scores: HashMap<I, f32> = HashMap::new();
 
     for (rank, (id, _)) in results_a.into_iter().enumerate() {
-        *scores.entry(id).or_default() += 1.0 / (rank as f32 + k);
+        *scores.entry(id).or_default() += 1.0 / (k + rank as f32);
     }
     for (rank, (id, _)) in results_b.into_iter().enumerate() {
-        *scores.entry(id).or_default() += 1.0 / (rank as f32 + k);
+        *scores.entry(id).or_default() += 1.0 / (k + rank as f32);
     }
 
     let mut results: Vec<_> = scores.into_iter().collect();
@@ -149,7 +147,10 @@ where
     results
 }
 
-/// RRF with preallocated output buffer (zero-allocation hot path).
+/// RRF with preallocated output buffer.
+///
+/// Reuses the output Vec but still allocates a HashMap internally for
+/// score accumulation.
 #[allow(clippy::cast_precision_loss)]
 pub fn rrf_into<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -162,10 +163,10 @@ pub fn rrf_into<I: Clone + Eq + Hash>(
     let mut scores: HashMap<I, f32> = HashMap::with_capacity(results_a.len() + results_b.len());
 
     for (rank, (id, _)) in results_a.iter().enumerate() {
-        *scores.entry(id.clone()).or_default() += 1.0 / (rank as f32 + k);
+        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
     }
     for (rank, (id, _)) in results_b.iter().enumerate() {
-        *scores.entry(id.clone()).or_default() += 1.0 / (rank as f32 + k);
+        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
     }
 
     output.extend(scores);
@@ -184,7 +185,7 @@ where
 
     for list in lists {
         for (rank, (id, _)) in list.as_ref().iter().enumerate() {
-            *scores.entry(id.clone()).or_default() += 1.0 / (rank as f32 + k);
+            *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
         }
     }
 
@@ -200,6 +201,9 @@ where
 /// Weighted score fusion with optional normalization.
 ///
 /// Formula: `score(d) = w_a × norm(s_a) + w_b × norm(s_b)`
+///
+/// When `normalize` is true, scores are scaled to [0,1] using min-max
+/// normalization before weighting.
 pub fn weighted<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
     results_b: &[(I, f32)],
@@ -271,6 +275,8 @@ pub fn combmnz<I: Clone + Eq + Hash>(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Borda count — each position contributes `N - rank` points.
+///
+/// For a list of N items, position 0 gets N points, position 1 gets N-1, etc.
 #[allow(clippy::cast_precision_loss)]
 pub fn borda<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -349,6 +355,18 @@ mod tests {
     }
 
     #[test]
+    fn rrf_score_formula() {
+        // Verify the RRF formula: 1/(k + rank) where rank is 0-indexed
+        let a = vec![("d1", 1.0)]; // rank 0
+        let b: Vec<(&str, f32)> = vec![];
+        let f = rrf(a, b, RrfConfig::new(60));
+
+        // First item (rank=0) should get 1/60
+        let expected = 1.0 / 60.0;
+        assert!((f[0].1 - expected).abs() < 1e-6);
+    }
+
+    #[test]
     fn combmnz_rewards_overlap() {
         let a = ranked(&["d1", "d2"]);
         let b = ranked(&["d2", "d3"]);
@@ -358,12 +376,36 @@ mod tests {
     }
 
     #[test]
+    fn combsum_basic() {
+        let a = vec![("d1", 1.0), ("d2", 0.5)];
+        let b = vec![("d2", 1.0), ("d3", 0.5)];
+        let f = combsum(&a, &b);
+
+        // d2 appears in both with high scores
+        assert_eq!(f[0].0, "d2");
+    }
+
+    #[test]
+    fn weighted_skewed() {
+        let a = vec![("d1", 1.0)];
+        let b = vec![("d2", 1.0)];
+
+        // 90% weight to list a
+        let f = weighted(&a, &b, WeightedConfig::with_normalize(0.9, 0.1, false));
+        assert_eq!(f[0].0, "d1");
+
+        // 90% weight to list b
+        let f = weighted(&a, &b, WeightedConfig::with_normalize(0.1, 0.9, false));
+        assert_eq!(f[0].0, "d2");
+    }
+
+    #[test]
     fn borda_symmetric() {
         let a = ranked(&["d1", "d2", "d3"]);
         let b = ranked(&["d3", "d2", "d1"]);
         let f = borda(&a, &b);
 
-        // All equal: d1=3+1, d2=2+2, d3=1+3
+        // All equal: d1=3+1=4, d2=2+2=4, d3=1+3=4
         let scores: Vec<f32> = f.iter().map(|(_, s)| *s).collect();
         assert!((scores[0] - scores[1]).abs() < 0.01);
         assert!((scores[1] - scores[2]).abs() < 0.01);
@@ -382,20 +424,32 @@ mod tests {
     }
 
     #[test]
-    fn weighted_custom() {
-        let a = vec![("d1", 1.0)];
-        let b = vec![("d2", 1.0)];
-        let f = weighted(&a, &b, WeightedConfig::with_normalize(0.9, 0.1, false));
-
-        assert_eq!(f[0].0, "d1");
-    }
-
-    #[test]
     fn empty_inputs() {
         let empty: Vec<(&str, f32)> = vec![];
         let non_empty = ranked(&["d1"]);
 
         assert_eq!(rrf(empty.clone(), non_empty.clone(), RrfConfig::default()).len(), 1);
         assert_eq!(rrf(non_empty, empty, RrfConfig::default()).len(), 1);
+    }
+
+    #[test]
+    fn both_empty() {
+        let empty: Vec<(&str, f32)> = vec![];
+        assert_eq!(rrf(empty.clone(), empty.clone(), RrfConfig::default()).len(), 0);
+        assert_eq!(combsum(&empty, &empty).len(), 0);
+        assert_eq!(borda(&empty, &empty).len(), 0);
+    }
+
+    #[test]
+    fn duplicate_ids_in_same_list() {
+        // If same doc appears twice in one list, it should accumulate
+        let a = vec![("d1", 1.0), ("d1", 0.5)];
+        let b: Vec<(&str, f32)> = vec![];
+        let f = rrf(a, b, RrfConfig::new(60));
+
+        assert_eq!(f.len(), 1);
+        // Should get 1/60 + 1/61
+        let expected = 1.0 / 60.0 + 1.0 / 61.0;
+        assert!((f[0].1 - expected).abs() < 1e-6);
     }
 }
