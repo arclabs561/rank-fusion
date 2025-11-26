@@ -68,12 +68,35 @@ let fused = FusionMethod::CombMnz.fuse(&sparse, &dense);
 | Function | Method | Uses Scores | Best For |
 |----------|--------|-------------|----------|
 | `rrf` | Reciprocal Rank Fusion | No | Different score scales |
+| `rrf_weighted` | RRF with per-list weights | No | Heterogeneous retrievers |
 | `combsum` | Sum of normalized scores | Yes | Same scale, trust scores |
 | `combmnz` | Sum × overlap count | Yes | Reward multi-retriever agreement |
 | `borda` | Borda count | No | Simple voting |
 | `weighted` | Weighted combination | Yes | Trust one retriever more |
 
 All have `*_multi` variants for 3+ lists.
+
+### RRF k Parameter Tuning
+
+The `k` parameter controls score distribution (default: 60, from Cormack et al., 2009):
+
+| k Value | Effect | Use When |
+|---------|--------|----------|
+| 10-30 | Aggressive — top picks dominate | High confidence in retrievers |
+| 50-100 | Balanced (default) | General hybrid search |
+| 200+ | Conservative — rewards consensus | Diverse/experimental systems |
+
+```rust
+// Aggressive (trust top results)
+let config = RrfConfig::new(20);
+
+// Conservative (reward agreement)
+let config = RrfConfig::new(100);
+
+// Weighted RRF: trust dense 2x more than BM25
+let weights = [0.33, 0.67];
+let fused = rrf_weighted(&[&bm25, &dense], &weights, RrfConfig::default())?;
+```
 
 ## Complete E2E Example
 

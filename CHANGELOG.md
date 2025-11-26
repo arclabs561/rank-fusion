@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.12] - 2025-11-26
+
+### Changed
+- Updated README with RRF k parameter tuning guide (Cormack 2009)
+- Added k value recommendations by use case
+- Documented `rrf_weighted` in algorithms table
+
 ## [0.1.11] - 2025-11-26
 
 ### Added
