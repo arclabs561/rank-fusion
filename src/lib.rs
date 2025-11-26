@@ -222,6 +222,7 @@ impl FusionConfig {
 /// let fused = rrf(sparse, dense, RrfConfig::default());
 /// assert_eq!(fused[0].0, "d2"); // appears in both
 /// ```
+#[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn rrf<I, A, B>(results_a: A, results_b: B, config: RrfConfig) -> Vec<(I, f32)>
 where
@@ -262,13 +263,14 @@ pub fn rrf_into<I: Clone + Eq + Hash>(
     }
 
     output.extend(scores);
-    output.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    sort_scored_desc(output);
     if let Some(top_k) = config.top_k {
         output.truncate(top_k);
     }
 }
 
 /// RRF for 3+ result lists.
+#[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn rrf_multi<I, L>(lists: &[L], config: RrfConfig) -> Vec<(I, f32)>
 where
@@ -294,6 +296,7 @@ where
 /// Weighted score fusion with optional normalization.
 ///
 /// Formula: `score(d) = w_a × norm(s_a) + w_b × norm(s_b)`
+#[must_use]
 pub fn weighted<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
     results_b: &[(I, f32)],
@@ -375,6 +378,7 @@ where
 }
 
 /// `CombSUM` — sum of normalized scores.
+#[must_use]
 pub fn combsum<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
     results_b: &[(I, f32)],
@@ -383,6 +387,7 @@ pub fn combsum<I: Clone + Eq + Hash>(
 }
 
 /// `CombSUM` with configuration.
+#[must_use]
 pub fn combsum_with_config<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
     results_b: &[(I, f32)],
@@ -392,6 +397,7 @@ pub fn combsum_with_config<I: Clone + Eq + Hash>(
 }
 
 /// `CombSUM` for 3+ result lists.
+#[must_use]
 pub fn combsum_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
 where
     I: Clone + Eq + Hash,
@@ -411,6 +417,7 @@ where
 }
 
 /// `CombMNZ` — sum × number of lists containing the document.
+#[must_use]
 pub fn combmnz<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
     results_b: &[(I, f32)],
@@ -419,6 +426,7 @@ pub fn combmnz<I: Clone + Eq + Hash>(
 }
 
 /// `CombMNZ` with configuration.
+#[must_use]
 pub fn combmnz_with_config<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
     results_b: &[(I, f32)],
@@ -428,6 +436,7 @@ pub fn combmnz_with_config<I: Clone + Eq + Hash>(
 }
 
 /// `CombMNZ` for 3+ result lists.
+#[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn combmnz_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
 where
@@ -450,7 +459,7 @@ where
         .into_iter()
         .map(|(id, (sum, n))| (id, sum * n as f32))
         .collect();
-    results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    sort_scored_desc(&mut results);
     if let Some(top_k) = config.top_k {
         results.truncate(top_k);
     }
@@ -462,6 +471,7 @@ where
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Borda count — each position contributes `N - rank` points.
+#[must_use]
 pub fn borda<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
     results_b: &[(I, f32)],
@@ -470,6 +480,7 @@ pub fn borda<I: Clone + Eq + Hash>(
 }
 
 /// Borda count with configuration.
+#[must_use]
 pub fn borda_with_config<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
     results_b: &[(I, f32)],
@@ -479,6 +490,7 @@ pub fn borda_with_config<I: Clone + Eq + Hash>(
 }
 
 /// Borda count for 3+ result lists.
+#[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn borda_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
 where
@@ -503,14 +515,24 @@ where
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Sort scores descending and optionally truncate.
+///
+/// Uses `total_cmp` for deterministic NaN handling (NaN sorts after valid values).
 #[inline]
 fn finalize<I>(scores: HashMap<I, f32>, top_k: Option<usize>) -> Vec<(I, f32)> {
     let mut results: Vec<_> = scores.into_iter().collect();
-    results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    sort_scored_desc(&mut results);
     if let Some(k) = top_k {
         results.truncate(k);
     }
     results
+}
+
+/// Sort scored results in descending order.
+///
+/// Uses `f32::total_cmp` for deterministic ordering of NaN values.
+#[inline]
+fn sort_scored_desc<I>(results: &mut [(I, f32)]) {
+    results.sort_by(|a, b| b.1.total_cmp(&a.1));
 }
 
 /// Returns (scale, offset) for min-max normalization: `(x - offset) * scale`.
