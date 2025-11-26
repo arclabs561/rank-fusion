@@ -1,0 +1,29 @@
+[package]
+name = "rank-fusion-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+
+[dependencies.rank-fusion]
+path = ".."
+
+[[bin]]
+name = "fuzz_rrf"
+path = "fuzz_targets/fuzz_rrf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_combsum"
+path = "fuzz_targets/fuzz_combsum.rs"
+test = false
+doc = false
+bench = false

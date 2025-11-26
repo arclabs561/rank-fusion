@@ -782,6 +782,134 @@ mod tests {
         assert!(!config.normalize);
         assert_eq!(config.top_k, Some(10));
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Edge Case Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn nan_scores_handled() {
+        let a = vec![("d1", f32::NAN), ("d2", 0.5)];
+        let b = vec![("d2", 0.9), ("d3", 0.1)];
+        
+        // Should not panic
+        let _ = rrf(a.clone(), b.clone(), RrfConfig::default());
+        let _ = combsum(&a, &b);
+        let _ = combmnz(&a, &b);
+        let _ = borda(&a, &b);
+    }
+
+    #[test]
+    fn inf_scores_handled() {
+        let a = vec![("d1", f32::INFINITY), ("d2", 0.5)];
+        let b = vec![("d2", f32::NEG_INFINITY), ("d3", 0.1)];
+        
+        // Should not panic
+        let _ = rrf(a.clone(), b.clone(), RrfConfig::default());
+        let _ = combsum(&a, &b);
+    }
+
+    #[test]
+    fn zero_scores() {
+        let a = vec![("d1", 0.0), ("d2", 0.0)];
+        let b = vec![("d2", 0.0), ("d3", 0.0)];
+        
+        let f = combsum(&a, &b);
+        assert_eq!(f.len(), 3);
+    }
+
+    #[test]
+    fn negative_scores() {
+        let a = vec![("d1", -1.0), ("d2", -0.5)];
+        let b = vec![("d2", -0.9), ("d3", -0.1)];
+        
+        let f = combsum(&a, &b);
+        assert_eq!(f.len(), 3);
+        // Should normalize properly
+    }
+
+    #[test]
+    fn large_k_value() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+        
+        // k = u32::MAX should not overflow
+        let f = rrf(a, b, RrfConfig::new(u32::MAX));
+        assert!(!f.is_empty());
+    }
+
+    #[test]
+    fn single_item_lists() {
+        let a = vec![("d1", 1.0)];
+        let b = vec![("d1", 1.0)];
+        
+        let f = rrf(a.clone(), b.clone(), RrfConfig::default());
+        assert_eq!(f.len(), 1);
+        
+        let f = combsum(&a, &b);
+        assert_eq!(f.len(), 1);
+        
+        let f = borda(&a, &b);
+        assert_eq!(f.len(), 1);
+    }
+
+    #[test]
+    fn disjoint_lists() {
+        let a = vec![("d1", 1.0), ("d2", 0.9)];
+        let b = vec![("d3", 1.0), ("d4", 0.9)];
+        
+        let f = rrf(a.clone(), b.clone(), RrfConfig::default());
+        assert_eq!(f.len(), 4);
+        
+        let f = combmnz(&a, &b);
+        assert_eq!(f.len(), 4);
+        // No overlap bonus
+    }
+
+    #[test]
+    fn identical_lists() {
+        let a = ranked(&["d1", "d2", "d3"]);
+        let b = ranked(&["d1", "d2", "d3"]);
+        
+        let f = rrf(a.clone(), b.clone(), RrfConfig::default());
+        // Order should be preserved
+        assert_eq!(f[0].0, "d1");
+        assert_eq!(f[1].0, "d2");
+        assert_eq!(f[2].0, "d3");
+    }
+
+    #[test]
+    fn reversed_lists() {
+        let a = ranked(&["d1", "d2", "d3"]);
+        let b = ranked(&["d3", "d2", "d1"]);
+        
+        let f = rrf(a, b, RrfConfig::default());
+        // All items appear in both lists, so all have same total RRF score
+        // d2 at rank 1 in both gets: 2 * 1/(60+1) = 2/61
+        // d1 at rank 0,2 gets: 1/60 + 1/62
+        // d3 at rank 2,0 gets: 1/62 + 1/60
+        // d1 and d3 tie, d2 is slightly lower (rank 1+1 vs 0+2)
+        // Just check we get all 3
+        assert_eq!(f.len(), 3);
+    }
+
+    #[test]
+    fn top_k_larger_than_result() {
+        let a = ranked(&["d1"]);
+        let b = ranked(&["d2"]);
+        
+        let f = rrf(a, b, RrfConfig::default().with_top_k(100));
+        assert_eq!(f.len(), 2);
+    }
+
+    #[test]
+    fn top_k_zero() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+        
+        let f = rrf(a, b, RrfConfig::default().with_top_k(0));
+        assert_eq!(f.len(), 0);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -879,6 +1007,86 @@ mod proptests {
                 let high_k_range = high_k[0].1 - high_k[high_k.len()-1].1;
                 prop_assert!(high_k_range <= low_k_range);
             }
+        }
+
+        /// combmnz with overlap should score higher than without
+        #[test]
+        fn combmnz_overlap_bonus(id in 0u32..100, score in 0.1f32..1.0) {
+            let a = vec![(id, score)];
+            let b = vec![(id, score)];
+            let c = vec![(id + 1, score)]; // different id, no overlap
+
+            let overlapped = combmnz(&a, &b);
+            let disjoint = combmnz(&a, &c);
+
+            // Overlapped should have higher score (multiplied by 2)
+            let overlap_score = overlapped.iter().find(|(i, _)| *i == id).map(|(_, s)| *s).unwrap_or(0.0);
+            let disjoint_score = disjoint.iter().find(|(i, _)| *i == id).map(|(_, s)| *s).unwrap_or(0.0);
+            prop_assert!(overlap_score >= disjoint_score);
+        }
+
+        /// weighted with extreme weights should favor one side
+        #[test]
+        fn weighted_extreme_weights(a_id in 0u32..50, b_id in 50u32..100) {
+            let a = vec![(a_id, 1.0f32)];
+            let b = vec![(b_id, 1.0f32)];
+
+            let high_a = weighted(&a, &b, WeightedConfig::new(0.99, 0.01).with_normalize(false));
+            let high_b = weighted(&a, &b, WeightedConfig::new(0.01, 0.99).with_normalize(false));
+
+            // With single items and no normalization, the weighted score is just the weight
+            // Both items get their respective weighted score, so higher weight wins
+            let a_score_in_high_a = high_a.iter().find(|(id, _)| *id == a_id).map(|(_, s)| *s).unwrap_or(0.0);
+            let b_score_in_high_a = high_a.iter().find(|(id, _)| *id == b_id).map(|(_, s)| *s).unwrap_or(0.0);
+            prop_assert!(a_score_in_high_a > b_score_in_high_a);
+
+            let a_score_in_high_b = high_b.iter().find(|(id, _)| *id == a_id).map(|(_, s)| *s).unwrap_or(0.0);
+            let b_score_in_high_b = high_b.iter().find(|(id, _)| *id == b_id).map(|(_, s)| *s).unwrap_or(0.0);
+            prop_assert!(b_score_in_high_b > a_score_in_high_b);
+        }
+
+        /// all algorithms should produce non-empty output for non-empty input
+        #[test]
+        fn nonempty_output(a in arb_results(5).prop_filter("need items", |v| !v.is_empty())) {
+            let b: Vec<(u32, f32)> = vec![];
+
+            prop_assert!(!rrf(a.clone(), b.clone(), RrfConfig::default()).is_empty());
+            prop_assert!(!combsum(&a, &b).is_empty());
+            prop_assert!(!combmnz(&a, &b).is_empty());
+            prop_assert!(!borda(&a, &b).is_empty());
+        }
+
+        /// multi variants should match two-list for n=2 (same scores, may differ in order for ties)
+        #[test]
+        fn multi_matches_two_list(a in arb_results(10), b in arb_results(10)) {
+            let two_list = rrf(a.clone(), b.clone(), RrfConfig::default());
+            let multi = rrf_multi(&[a.clone(), b.clone()], RrfConfig::default());
+
+            prop_assert_eq!(two_list.len(), multi.len());
+            
+            // Check same IDs with same scores (order may differ due to HashMap iteration)
+            let two_map: HashMap<_, _> = two_list.into_iter().collect();
+            let multi_map: HashMap<_, _> = multi.into_iter().collect();
+            
+            for (id, score) in &two_map {
+                let multi_score = multi_map.get(id).expect("same ids");
+                prop_assert!((score - multi_score).abs() < 1e-6, "score mismatch for {:?}", id);
+            }
+        }
+
+        /// borda should give highest score to items in position 0
+        #[test]
+        fn borda_top_position_wins(n in 2usize..10) {
+            let top_id = 999u32;
+            let a: Vec<(u32, f32)> = std::iter::once((top_id, 1.0))
+                .chain((0..n as u32 - 1).map(|i| (i, 0.9 - i as f32 * 0.1)))
+                .collect();
+            let b: Vec<(u32, f32)> = std::iter::once((top_id, 1.0))
+                .chain((100..100 + n as u32 - 1).map(|i| (i, 0.9)))
+                .collect();
+
+            let f = borda(&a, &b);
+            prop_assert_eq!(f[0].0, top_id);
         }
     }
 }

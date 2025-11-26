@@ -57,12 +57,26 @@ fn bench_algorithms(c: &mut Criterion) {
 }
 
 fn bench_multi(c: &mut Criterion) {
+    use rank_fusion::{borda_multi, combmnz_multi, combsum_multi, FusionConfig};
+    
     let mut g = c.benchmark_group("multi");
 
     let lists: Vec<Vec<(String, f32)>> = (0..5).map(|i| ranked(100, &format!("list{i}"))).collect();
 
     g.bench_function("rrf_multi_5x100", |bench| {
         bench.iter(|| black_box(rrf_multi(&lists, RrfConfig::default())));
+    });
+
+    g.bench_function("borda_multi_5x100", |bench| {
+        bench.iter(|| black_box(borda_multi(&lists, FusionConfig::default())));
+    });
+
+    g.bench_function("combsum_multi_5x100", |bench| {
+        bench.iter(|| black_box(combsum_multi(&lists, FusionConfig::default())));
+    });
+
+    g.bench_function("combmnz_multi_5x100", |bench| {
+        bench.iter(|| black_box(combmnz_multi(&lists, FusionConfig::default())));
     });
 
     g.finish();
