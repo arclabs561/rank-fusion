@@ -1,4 +1,4 @@
-//! # rerank
+//! # rank-fusion
 //!
 //! Fast rank fusion algorithms for hybrid search systems.
 //!
@@ -16,7 +16,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use rerank::{rrf, RrfConfig};
+//! use rank_fusion::{rrf, RrfConfig};
 //!
 //! let sparse = vec![("doc1", 0.9), ("doc2", 0.7), ("doc3", 0.5)];
 //! let dense = vec![("doc2", 0.85), ("doc4", 0.6), ("doc1", 0.4)];
@@ -119,7 +119,7 @@ impl WeightedConfig {
 /// # Example
 ///
 /// ```rust
-/// use rerank::{rrf, RrfConfig};
+/// use rank_fusion::{rrf, RrfConfig};
 ///
 /// let sparse = vec![("d1", 0.9), ("d2", 0.5)];
 /// let dense = vec![("d2", 0.8), ("d3", 0.3)];
@@ -310,70 +310,6 @@ fn min_max_params<I>(results: &[(I, f32)]) -> (f32, f32) {
     } else {
         (1.0 / range, min)
     }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Legacy Aliases (deprecated)
-// ─────────────────────────────────────────────────────────────────────────────
-
-#[doc(hidden)]
-#[deprecated(since = "0.2.0", note = "renamed to `rrf`")]
-pub fn fuse_rrf<I, A, B>(a: A, b: B, c: RrfConfig) -> Vec<(I, f32)>
-where
-    I: Clone + Eq + Hash,
-    A: IntoIterator<Item = (I, f32)>,
-    B: IntoIterator<Item = (I, f32)>,
-{
-    rrf(a, b, c)
-}
-
-#[doc(hidden)]
-#[deprecated(since = "0.2.0", note = "renamed to `rrf_into`")]
-pub fn fuse_rrf_into<I: Clone + Eq + Hash>(
-    a: &[(I, f32)],
-    b: &[(I, f32)],
-    c: RrfConfig,
-    out: &mut Vec<(I, f32)>,
-) {
-    rrf_into(a, b, c, out);
-}
-
-#[doc(hidden)]
-#[deprecated(since = "0.2.0", note = "renamed to `rrf_multi`")]
-pub fn fuse_rrf_multi<I, L>(lists: &[L], c: RrfConfig) -> Vec<(I, f32)>
-where
-    I: Clone + Eq + Hash,
-    L: AsRef<[(I, f32)]>,
-{
-    rrf_multi(lists, c)
-}
-
-#[doc(hidden)]
-#[deprecated(since = "0.2.0", note = "renamed to `weighted`")]
-pub fn fuse_weighted<I: Clone + Eq + Hash>(
-    a: &[(I, f32)],
-    b: &[(I, f32)],
-    c: WeightedConfig,
-) -> Vec<(I, f32)> {
-    weighted(a, b, c)
-}
-
-#[doc(hidden)]
-#[deprecated(since = "0.2.0", note = "renamed to `combsum`")]
-pub fn fuse_combsum<I: Clone + Eq + Hash>(a: &[(I, f32)], b: &[(I, f32)]) -> Vec<(I, f32)> {
-    combsum(a, b)
-}
-
-#[doc(hidden)]
-#[deprecated(since = "0.2.0", note = "renamed to `combmnz`")]
-pub fn fuse_combmnz<I: Clone + Eq + Hash>(a: &[(I, f32)], b: &[(I, f32)]) -> Vec<(I, f32)> {
-    combmnz(a, b)
-}
-
-#[doc(hidden)]
-#[deprecated(since = "0.2.0", note = "renamed to `borda`")]
-pub fn fuse_borda<I: Clone + Eq + Hash>(a: &[(I, f32)], b: &[(I, f32)]) -> Vec<(I, f32)> {
-    borda(a, b)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

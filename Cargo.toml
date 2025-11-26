@@ -1,12 +1,12 @@
 [package]
-name = "rerank"
-version = "0.2.0"
+name = "rank-fusion"
+version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Fast rank fusion for hybrid search — RRF, CombMNZ, Borda, Weighted"
-keywords = ["search", "ranking", "fusion", "rrf", "rerank"]
+keywords = ["search", "ranking", "fusion", "rrf", "hybrid"]
 categories = ["algorithms", "data-structures"]
-repository = "https://github.com/arclabs561/rerank"
+repository = "https://github.com/arclabs561/rank-fusion"
 readme = "README.md"
 authors = ["Arc <attobop@gmail.com>"]
 

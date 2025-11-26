@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use rerank::{borda, combmnz, combsum, rrf, rrf_into, rrf_multi, weighted, RrfConfig, WeightedConfig};
+use rank_fusion::{borda, combmnz, combsum, rrf, rrf_into, rrf_multi, weighted, RrfConfig, WeightedConfig};
 
 fn ranked(n: usize, prefix: &str) -> Vec<(String, f32)> {
     (0..n)

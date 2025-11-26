@@ -1,9 +1,9 @@
-# rerank
+# rank-fusion
 
 Fast rank fusion for hybrid search.
 
-[![Crates.io](https://img.shields.io/crates/v/rerank.svg)](https://crates.io/crates/rerank)
-[![Docs](https://docs.rs/rerank/badge.svg)](https://docs.rs/rerank)
+[![Crates.io](https://img.shields.io/crates/v/rank-fusion.svg)](https://crates.io/crates/rank-fusion)
+[![Docs](https://docs.rs/rank-fusion/badge.svg)](https://docs.rs/rank-fusion)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
 
 Zero-dependency implementations of rank fusion algorithms for combining results from multiple retrieval systems (BM25 + vectors, hybrid search, RAG).
@@ -21,7 +21,7 @@ Zero-dependency implementations of rank fusion algorithms for combining results 
 ## Usage
 
 ```rust
-use rerank::{rrf, RrfConfig};
+use rank_fusion::{rrf, RrfConfig};
 
 let sparse = vec![("doc1", 0.9), ("doc2", 0.7)];  // BM25
 let dense = vec![("doc2", 0.8), ("doc3", 0.6)];   // vectors
