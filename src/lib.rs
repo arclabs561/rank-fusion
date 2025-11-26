@@ -195,6 +195,154 @@ impl FusionConfig {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Prelude
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Prelude for common imports.
+///
+/// ```rust
+/// use rank_fusion::prelude::*;
+/// ```
+pub mod prelude {
+    pub use crate::{borda, combmnz, combsum, rrf, weighted};
+    pub use crate::{FusionConfig, FusionError, Result, RrfConfig, WeightedConfig};
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unified Fusion Method
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Unified fusion method for dispatching to different algorithms.
+///
+/// Provides a single entry point for all fusion algorithms with a consistent API.
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::FusionMethod;
+///
+/// let sparse = vec![("d1", 10.0), ("d2", 8.0)];
+/// let dense = vec![("d2", 0.9), ("d3", 0.7)];
+///
+/// // Use RRF (rank-based, score-agnostic)
+/// let fused = FusionMethod::Rrf { k: 60 }.fuse(&sparse, &dense);
+///
+/// // Use CombSUM (score-based)
+/// let fused = FusionMethod::CombSum.fuse(&sparse, &dense);
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FusionMethod {
+    /// Reciprocal Rank Fusion (ignores scores, uses rank position).
+    Rrf {
+        /// Smoothing constant (default: 60).
+        k: u32,
+    },
+    /// CombSUM — sum of normalized scores.
+    CombSum,
+    /// CombMNZ — sum × overlap count.
+    CombMnz,
+    /// Borda count — N - rank points.
+    Borda,
+    /// Weighted combination with custom weights.
+    Weighted {
+        /// Weight for first list.
+        weight_a: f32,
+        /// Weight for second list.
+        weight_b: f32,
+        /// Whether to normalize scores before combining.
+        normalize: bool,
+    },
+}
+
+impl Default for FusionMethod {
+    fn default() -> Self {
+        Self::Rrf { k: 60 }
+    }
+}
+
+impl FusionMethod {
+    /// Create RRF method with default k=60.
+    #[must_use]
+    pub const fn rrf() -> Self {
+        Self::Rrf { k: 60 }
+    }
+
+    /// Create RRF method with custom k.
+    #[must_use]
+    pub const fn rrf_with_k(k: u32) -> Self {
+        Self::Rrf { k }
+    }
+
+    /// Create weighted method with custom weights.
+    #[must_use]
+    pub const fn weighted(weight_a: f32, weight_b: f32) -> Self {
+        Self::Weighted {
+            weight_a,
+            weight_b,
+            normalize: true,
+        }
+    }
+
+    /// Fuse two ranked lists using this method.
+    ///
+    /// # Arguments
+    /// * `a` - First ranked list (ID, score pairs)
+    /// * `b` - Second ranked list (ID, score pairs)
+    ///
+    /// # Returns
+    /// Combined list sorted by fused score (descending)
+    #[must_use]
+    pub fn fuse<I: Clone + Eq + Hash>(&self, a: &[(I, f32)], b: &[(I, f32)]) -> Vec<(I, f32)> {
+        match self {
+            Self::Rrf { k } => crate::rrf_multi(&[a, b], RrfConfig::new(*k)),
+            Self::CombSum => crate::combsum(a, b),
+            Self::CombMnz => crate::combmnz(a, b),
+            Self::Borda => crate::borda(a, b),
+            Self::Weighted {
+                weight_a,
+                weight_b,
+                normalize,
+            } => crate::weighted(
+                a,
+                b,
+                WeightedConfig::new(*weight_a, *weight_b).with_normalize(*normalize),
+            ),
+        }
+    }
+
+    /// Fuse multiple ranked lists using this method.
+    ///
+    /// # Arguments
+    /// * `lists` - Slice of ranked lists
+    ///
+    /// # Returns
+    /// Combined list sorted by fused score (descending)
+    #[must_use]
+    pub fn fuse_multi<I, L>(&self, lists: &[L]) -> Vec<(I, f32)>
+    where
+        I: Clone + Eq + Hash,
+        L: AsRef<[(I, f32)]>,
+    {
+        match self {
+            Self::Rrf { k } => crate::rrf_multi(lists, RrfConfig::new(*k)),
+            Self::CombSum => crate::combsum_multi(lists, FusionConfig::default()),
+            Self::CombMnz => crate::combmnz_multi(lists, FusionConfig::default()),
+            Self::Borda => crate::borda_multi(lists, FusionConfig::default()),
+            Self::Weighted { .. } => {
+                // For multi-list weighted, use equal weights
+                // (users should use weighted_multi directly for custom weights)
+                if lists.len() == 2 {
+                    self.fuse(lists[0].as_ref(), lists[1].as_ref())
+                } else {
+                    // Fall back to equal-weighted combsum for 3+ lists
+                    crate::combsum_multi(lists, FusionConfig::default())
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RRF (Reciprocal Rank Fusion)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -897,6 +1045,79 @@ mod tests {
 
         let f = rrf(a, b, RrfConfig::default().with_top_k(0));
         assert_eq!(f.len(), 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FusionMethod Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn fusion_method_rrf() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+
+        let f = FusionMethod::rrf().fuse(&a, &b);
+        assert_eq!(f[0].0, "d2"); // Appears in both
+    }
+
+    #[test]
+    fn fusion_method_combsum() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+
+        let f = FusionMethod::CombSum.fuse(&a, &b);
+        assert_eq!(f[0].0, "d2"); // Highest combined score
+    }
+
+    #[test]
+    fn fusion_method_combmnz() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+
+        let f = FusionMethod::CombMnz.fuse(&a, &b);
+        assert_eq!(f[0].0, "d2"); // Overlap bonus
+    }
+
+    #[test]
+    fn fusion_method_borda() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+
+        let f = FusionMethod::Borda.fuse(&a, &b);
+        assert_eq!(f[0].0, "d2");
+    }
+
+    #[test]
+    fn fusion_method_weighted() {
+        let a = vec![("d1", 1.0f32)];
+        let b = vec![("d2", 1.0f32)];
+
+        // Heavy weight on first list
+        let f = FusionMethod::weighted(0.9, 0.1).fuse(&a, &b);
+        assert_eq!(f[0].0, "d1");
+
+        // Heavy weight on second list
+        let f = FusionMethod::weighted(0.1, 0.9).fuse(&a, &b);
+        assert_eq!(f[0].0, "d2");
+    }
+
+    #[test]
+    fn fusion_method_multi() {
+        let lists: Vec<Vec<(&str, f32)>> = vec![
+            ranked(&["d1", "d2"]),
+            ranked(&["d2", "d3"]),
+            ranked(&["d1", "d3"]),
+        ];
+
+        let f = FusionMethod::rrf().fuse_multi(&lists);
+        assert_eq!(f.len(), 3);
+        // d1 and d2 both appear in 2 lists, should be top 2
+    }
+
+    #[test]
+    fn fusion_method_default_is_rrf() {
+        let method = FusionMethod::default();
+        assert!(matches!(method, FusionMethod::Rrf { k: 60 }));
     }
 }
 
