@@ -1082,5 +1082,126 @@ mod proptests {
             let f = borda(&a, &b);
             prop_assert_eq!(f[0].0, top_id);
         }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // NaN / Infinity / Edge Case Tests (learned from rank-refine)
+        // ─────────────────────────────────────────────────────────────────────────
+
+        /// NaN scores should not corrupt sort order
+        #[test]
+        fn nan_does_not_corrupt_sorting(a in arb_results(10)) {
+            let mut with_nan = a.clone();
+            if !with_nan.is_empty() {
+                with_nan[0].1 = f32::NAN;
+            }
+            let b: Vec<(u32, f32)> = vec![];
+
+            // Should not panic and should produce sorted output
+            let result = combsum(&with_nan, &b);
+            for window in result.windows(2) {
+                // With total_cmp, NaN sorts consistently
+                let cmp = window[0].1.total_cmp(&window[1].1);
+                prop_assert!(cmp != std::cmp::Ordering::Less,
+                    "Not sorted: {:?} < {:?}", window[0].1, window[1].1);
+            }
+        }
+
+        /// Infinity scores should be handled gracefully (no panics)
+        #[test]
+        fn infinity_handled_gracefully(id in 0u32..50) {
+            let a = vec![(id, f32::INFINITY)];
+            let b = vec![(id + 100, f32::NEG_INFINITY)]; // Different ID to avoid collision
+
+            // Should not panic
+            let result = combsum(&a, &b);
+            prop_assert_eq!(result.len(), 2);
+            // Just verify we got results, don't assert order (normalization changes things)
+        }
+
+        /// Output always sorted descending (invariant)
+        #[test]
+        fn output_always_sorted(a in arb_results(20), b in arb_results(20)) {
+            for result in [
+                rrf(a.clone(), b.clone(), RrfConfig::default()),
+                combsum(&a, &b),
+                combmnz(&a, &b),
+                borda(&a, &b),
+            ] {
+                for window in result.windows(2) {
+                    prop_assert!(
+                        window[0].1.total_cmp(&window[1].1) != std::cmp::Ordering::Less,
+                        "Not sorted: {} < {}", window[0].1, window[1].1
+                    );
+                }
+            }
+        }
+
+        /// Unique IDs in output (no duplicates)
+        #[test]
+        fn unique_ids_in_output(a in arb_results(20), b in arb_results(20)) {
+            let result = rrf(a, b, RrfConfig::default());
+            let mut seen = std::collections::HashSet::new();
+            for (id, _) in &result {
+                prop_assert!(seen.insert(id), "Duplicate ID in output: {:?}", id);
+            }
+        }
+
+        /// CombSUM scores are non-negative after normalization
+        #[test]
+        fn combsum_scores_nonnegative(a in arb_results(10), b in arb_results(10)) {
+            let result = combsum(&a, &b);
+            for (_, score) in &result {
+                if !score.is_nan() {
+                    prop_assert!(*score >= -0.01, "Score {} is negative", score);
+                }
+            }
+        }
+
+        /// Equal weights produce symmetric treatment
+        #[test]
+        fn equal_weights_symmetric(a in arb_results(10), b in arb_results(10)) {
+            let ab = weighted(&a, &b, WeightedConfig::default());
+            let ba = weighted(&b, &a, WeightedConfig::default());
+
+            let ab_map: HashMap<_, _> = ab.into_iter().collect();
+            let ba_map: HashMap<_, _> = ba.into_iter().collect();
+
+            prop_assert_eq!(ab_map.len(), ba_map.len());
+            for (id, score_ab) in &ab_map {
+                if let Some(score_ba) = ba_map.get(id) {
+                    prop_assert!((score_ab - score_ba).abs() < 1e-5,
+                        "Symmetric treatment violated for {:?}: {} != {}", id, score_ab, score_ba);
+                }
+            }
+        }
+
+        /// RRF scores bounded by 2/k for items in both lists
+        #[test]
+        fn rrf_score_bounded(k in 1u32..1000) {
+            let a = vec![(1u32, 1.0)];
+            let b = vec![(1u32, 1.0)];
+
+            let result = rrf(a, b, RrfConfig::new(k));
+            let max_possible = 2.0 / k as f32; // rank 0 in both lists
+            prop_assert!(result[0].1 <= max_possible + 1e-6);
+        }
+
+        /// Empty list handling: combining with empty should equal single list
+        #[test]
+        fn empty_list_preserves_ids(n in 1usize..10) {
+            // Create list with unique IDs
+            let a: Vec<(u32, f32)> = (0..n as u32).map(|i| (i, 1.0 - i as f32 * 0.1)).collect();
+            let empty: Vec<(u32, f32)> = vec![];
+
+            let rrf_result = rrf(a.clone(), empty, RrfConfig::default());
+            
+            // Should have same number of unique IDs
+            prop_assert_eq!(rrf_result.len(), n);
+
+            // All original IDs should be present
+            for (id, _) in &a {
+                prop_assert!(rrf_result.iter().any(|(rid, _)| rid == id), "Missing ID {:?}", id);
+            }
+        }
     }
 }
