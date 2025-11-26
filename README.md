@@ -5,7 +5,7 @@ Rank fusion for hybrid search.
 [![CI](https://github.com/arclabs561/rank-fusion/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/rank-fusion/actions)
 [![Crates.io](https://img.shields.io/crates/v/rank-fusion.svg)](https://crates.io/crates/rank-fusion)
 [![Docs](https://docs.rs/rank-fusion/badge.svg)](https://docs.rs/rank-fusion)
-[![MSRV](https://img.shields.io/badge/MSRV-1.70-blue)](https://blog.rust-lang.org/2023/06/01/Rust-1.70.0.html)
+[![MSRV](https://img.shields.io/badge/MSRV-1.74-blue)](https://blog.rust-lang.org/2023/11/16/Rust-1.74.0.html)
 
 ```rust
 use rank_fusion::{rrf, RrfConfig};
