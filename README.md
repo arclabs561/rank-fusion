@@ -56,6 +56,7 @@ Reciprocal Rank Fusion ignores scores. Only position matters:
 | Function | Uses Scores | Best For |
 |----------|-------------|----------|
 | `rrf` | No | Different scales (default) |
+| `isr` | No | When lower ranks matter more |
 | `combsum` | Yes | Same-scale scores |
 | `combmnz` | Yes | Reward overlap |
 | `borda` | No | Simple voting |

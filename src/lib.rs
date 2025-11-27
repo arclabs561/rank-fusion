@@ -16,6 +16,7 @@
 //! | Function | Uses Scores | Best For |
 //! |----------|-------------|----------|
 //! | [`rrf`] | No | Incompatible score scales |
+//! | [`isr`] | No | When lower ranks matter more |
 //! | [`combsum`] | Yes | Similar scales, trust scores |
 //! | [`combmnz`] | Yes | Reward overlap between lists |
 //! | [`borda`] | No | Simple voting |
@@ -205,7 +206,7 @@ impl FusionConfig {
 /// use rank_fusion::prelude::*;
 /// ```
 pub mod prelude {
-    pub use crate::{borda, combmnz, combsum, dbsf, rrf, rrf_with_config, weighted};
+    pub use crate::{borda, combmnz, combsum, dbsf, isr, isr_with_config, rrf, rrf_with_config, weighted};
     pub use crate::{FusionConfig, FusionError, FusionMethod, Result, RrfConfig, WeightedConfig};
 }
 
@@ -236,6 +237,11 @@ pub enum FusionMethod {
     /// Reciprocal Rank Fusion (ignores scores, uses rank position).
     Rrf {
         /// Smoothing constant (default: 60).
+        k: u32,
+    },
+    /// Inverse Square Root rank fusion (gentler decay than RRF).
+    Isr {
+        /// Smoothing constant (default: 1).
         k: u32,
     },
     /// CombSUM — sum of normalized scores.
@@ -276,6 +282,18 @@ impl FusionMethod {
         Self::Rrf { k }
     }
 
+    /// Create ISR method with default k=1.
+    #[must_use]
+    pub const fn isr() -> Self {
+        Self::Isr { k: 1 }
+    }
+
+    /// Create ISR method with custom k.
+    #[must_use]
+    pub const fn isr_with_k(k: u32) -> Self {
+        Self::Isr { k }
+    }
+
     /// Create weighted method with custom weights.
     #[must_use]
     pub const fn weighted(weight_a: f32, weight_b: f32) -> Self {
@@ -298,6 +316,7 @@ impl FusionMethod {
     pub fn fuse<I: Clone + Eq + Hash>(&self, a: &[(I, f32)], b: &[(I, f32)]) -> Vec<(I, f32)> {
         match self {
             Self::Rrf { k } => crate::rrf_multi(&[a, b], RrfConfig::new(*k)),
+            Self::Isr { k } => crate::isr_multi(&[a, b], RrfConfig::new(*k)),
             Self::CombSum => crate::combsum(a, b),
             Self::CombMnz => crate::combmnz(a, b),
             Self::Borda => crate::borda(a, b),
@@ -329,6 +348,7 @@ impl FusionMethod {
     {
         match self {
             Self::Rrf { k } => crate::rrf_multi(lists, RrfConfig::new(*k)),
+            Self::Isr { k } => crate::isr_multi(lists, RrfConfig::new(*k)),
             Self::CombSum => crate::combsum_multi(lists, FusionConfig::default()),
             Self::CombMnz => crate::combmnz_multi(lists, FusionConfig::default()),
             Self::Borda => crate::borda_multi(lists, FusionConfig::default()),
@@ -512,6 +532,99 @@ where
     }
 
     Ok(finalize(scores, config.top_k))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ISR (Inverse Square Root Rank)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Inverse Square Root rank fusion with default config (k=1).
+///
+/// Formula: `score(d) = Σ 1/sqrt(k + rank)` where rank is 0-indexed.
+///
+/// ISR has a gentler decay than RRF — lower ranks contribute more relative
+/// to top positions. Useful when you believe relevant documents may appear
+/// deeper in the lists.
+///
+/// Use [`isr_with_config`] to customize the k parameter.
+///
+/// # Complexity
+///
+/// O(n log n) where n = |a| + |b| (dominated by final sort).
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::isr;
+///
+/// let sparse = vec![("d1", 0.9), ("d2", 0.5)];
+/// let dense = vec![("d2", 0.8), ("d3", 0.3)];
+///
+/// let fused = isr(&sparse, &dense);
+/// assert_eq!(fused[0].0, "d2"); // appears in both lists
+/// ```
+#[must_use]
+pub fn isr<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+) -> Vec<(I, f32)> {
+    isr_with_config(results_a, results_b, RrfConfig::new(1))
+}
+
+/// ISR with custom configuration.
+///
+/// The k parameter controls decay steepness:
+/// - Lower k (e.g., 1): Top positions dominate more
+/// - Higher k (e.g., 10): More uniform contribution across positions
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::{isr_with_config, RrfConfig};
+///
+/// let a = vec![("d1", 0.9), ("d2", 0.5)];
+/// let b = vec![("d2", 0.8), ("d3", 0.3)];
+///
+/// let fused = isr_with_config(&a, &b, RrfConfig::new(1));
+/// ```
+#[must_use]
+#[allow(clippy::cast_precision_loss)]
+pub fn isr_with_config<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+    config: RrfConfig,
+) -> Vec<(I, f32)> {
+    let k = config.k as f32;
+    let mut scores: HashMap<I, f32> = HashMap::new();
+
+    for (rank, (id, _)) in results_a.iter().enumerate() {
+        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32).sqrt();
+    }
+    for (rank, (id, _)) in results_b.iter().enumerate() {
+        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32).sqrt();
+    }
+
+    finalize(scores, config.top_k)
+}
+
+/// ISR for 3+ result lists.
+#[must_use]
+#[allow(clippy::cast_precision_loss)]
+pub fn isr_multi<I, L>(lists: &[L], config: RrfConfig) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    let k = config.k as f32;
+    let mut scores: HashMap<I, f32> = HashMap::new();
+
+    for list in lists {
+        for (rank, (id, _)) in list.as_ref().iter().enumerate() {
+            *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32).sqrt();
+        }
+    }
+
+    finalize(scores, config.top_k)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -988,6 +1101,116 @@ mod tests {
 
         let result = rrf_weighted(&[&list_a[..], &list_b[..]], &weights, RrfConfig::default());
         assert!(matches!(result, Err(FusionError::ZeroWeights)));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ISR Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn isr_basic() {
+        let a = ranked(&["d1", "d2", "d3"]);
+        let b = ranked(&["d2", "d3", "d4"]);
+        let f = isr(&a, &b);
+
+        // d2 appears in both lists, should rank high
+        assert!(f.iter().position(|(id, _)| *id == "d2").unwrap() < 2);
+    }
+
+    #[test]
+    fn isr_score_formula() {
+        // Single item in one list: score = 1/sqrt(k + 0) = 1/sqrt(k)
+        let a = vec![("d1", 1.0)];
+        let b: Vec<(&str, f32)> = vec![];
+        let f = isr_with_config(&a, &b, RrfConfig::new(1));
+
+        let expected = 1.0 / 1.0_f32.sqrt(); // 1/sqrt(1) = 1.0
+        assert!((f[0].1 - expected).abs() < 1e-6);
+    }
+
+    #[test]
+    fn isr_gentler_decay_than_rrf() {
+        // ISR should have a gentler decay than RRF
+        // At rank 0 and rank 3 (with k=1):
+        // RRF: 1/1 vs 1/4 = ratio of 4
+        // ISR: 1/sqrt(1) vs 1/sqrt(4) = 1 vs 0.5 = ratio of 2
+        let a = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8), ("d4", 0.7)];
+        let b: Vec<(&str, f32)> = vec![];
+
+        let rrf_result = rrf_with_config(&a, &b, RrfConfig::new(1));
+        let isr_result = isr_with_config(&a, &b, RrfConfig::new(1));
+
+        // Calculate ratio of first to last score
+        let rrf_ratio = rrf_result[0].1 / rrf_result[3].1;
+        let isr_ratio = isr_result[0].1 / isr_result[3].1;
+
+        // ISR should have smaller ratio (gentler decay)
+        assert!(
+            isr_ratio < rrf_ratio,
+            "ISR should have gentler decay: ISR ratio={}, RRF ratio={}",
+            isr_ratio,
+            rrf_ratio
+        );
+    }
+
+    #[test]
+    fn isr_multi_works() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+        let c = ranked(&["d3", "d4"]);
+        let f = isr_multi(&[&a, &b, &c], RrfConfig::new(1));
+
+        // All items should be present
+        assert_eq!(f.len(), 4);
+        // d2 and d3 appear in 2 lists each, d1 and d4 in 1
+        // d2 at rank 1,0 => 1/sqrt(2) + 1/sqrt(1)
+        // d3 at rank 1,0 => 1/sqrt(2) + 1/sqrt(1)
+        // They should be top
+        let top_2: Vec<_> = f.iter().take(2).map(|(id, _)| *id).collect();
+        assert!(top_2.contains(&"d2") && top_2.contains(&"d3"));
+    }
+
+    #[test]
+    fn isr_with_top_k() {
+        let a = ranked(&["d1", "d2", "d3"]);
+        let b = ranked(&["d2", "d3", "d4"]);
+        let f = isr_with_config(&a, &b, RrfConfig::new(1).with_top_k(2));
+
+        assert_eq!(f.len(), 2);
+    }
+
+    #[test]
+    fn isr_empty_lists() {
+        let empty: Vec<(&str, f32)> = vec![];
+        let non_empty = ranked(&["d1"]);
+
+        assert_eq!(isr(&empty, &non_empty).len(), 1);
+        assert_eq!(isr(&non_empty, &empty).len(), 1);
+        assert_eq!(isr(&empty, &empty).len(), 0);
+    }
+
+    #[test]
+    fn fusion_method_isr() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+
+        let f = FusionMethod::isr().fuse(&a, &b);
+        assert_eq!(f[0].0, "d2");
+
+        // With custom k
+        let f = FusionMethod::isr_with_k(10).fuse(&a, &b);
+        assert_eq!(f[0].0, "d2");
+    }
+
+    #[test]
+    fn fusion_method_isr_multi() {
+        let a = ranked(&["d1", "d2"]);
+        let b = ranked(&["d2", "d3"]);
+        let c = ranked(&["d3", "d4"]);
+        let lists = [&a[..], &b[..], &c[..]];
+
+        let f = FusionMethod::isr().fuse_multi(&lists);
+        assert!(!f.is_empty());
     }
 
     #[test]
@@ -1502,9 +1725,85 @@ mod proptests {
             let b: Vec<(u32, f32)> = vec![];
 
             prop_assert!(!rrf(&a, &b).is_empty());
+            prop_assert!(!isr(&a, &b).is_empty());
             prop_assert!(!combsum(&a, &b).is_empty());
             prop_assert!(!combmnz(&a, &b).is_empty());
             prop_assert!(!borda(&a, &b).is_empty());
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // ISR Property Tests
+        // ─────────────────────────────────────────────────────────────────────────
+
+        /// ISR output should be bounded by input size
+        #[test]
+        fn isr_output_bounded(a in arb_results(50), b in arb_results(50)) {
+            let result = isr(&a, &b);
+            prop_assert!(result.len() <= a.len() + b.len());
+        }
+
+        /// ISR scores should be positive
+        #[test]
+        fn isr_scores_positive(a in arb_results(50), b in arb_results(50)) {
+            let result = isr(&a, &b);
+            for (_, score) in &result {
+                prop_assert!(*score > 0.0);
+            }
+        }
+
+        /// ISR should be commutative
+        #[test]
+        fn isr_commutative(a in arb_results(20), b in arb_results(20)) {
+            let ab = isr(&a, &b);
+            let ba = isr(&b, &a);
+
+            prop_assert_eq!(ab.len(), ba.len());
+
+            let ab_map: HashMap<_, _> = ab.into_iter().collect();
+            let ba_map: HashMap<_, _> = ba.into_iter().collect();
+
+            for (id, score_ab) in &ab_map {
+                let score_ba = ba_map.get(id).expect("same keys");
+                prop_assert!((score_ab - score_ba).abs() < 1e-6);
+            }
+        }
+
+        /// ISR should be sorted descending
+        #[test]
+        fn isr_sorted_descending(a in arb_results(50), b in arb_results(50)) {
+            let result = isr(&a, &b);
+            for window in result.windows(2) {
+                prop_assert!(window[0].1 >= window[1].1);
+            }
+        }
+
+        /// ISR top_k should be respected
+        #[test]
+        fn isr_top_k_respected(a in arb_results(50), b in arb_results(50), k in 1usize..20) {
+            let result = isr_with_config(&a, &b, RrfConfig::new(1).with_top_k(k));
+            prop_assert!(result.len() <= k);
+        }
+
+        /// ISR should have gentler decay than RRF (higher relative contribution from lower ranks)
+        #[test]
+        fn isr_gentler_than_rrf(a in arb_results(10).prop_filter("need items", |v| v.len() >= 3)) {
+            let b: Vec<(u32, f32)> = vec![];
+
+            let rrf_result = rrf_with_config(&a, &b, RrfConfig::new(1));
+            let isr_result = isr_with_config(&a, &b, RrfConfig::new(1));
+
+            if rrf_result.len() >= 2 && isr_result.len() >= 2 {
+                // Compare ratio of first to last score
+                let rrf_ratio = rrf_result[0].1 / rrf_result.last().unwrap().1;
+                let isr_ratio = isr_result[0].1 / isr_result.last().unwrap().1;
+
+                // ISR should have smaller ratio (gentler decay)
+                // RRF: 1/k vs 1/(k+n-1) => ratio = (k+n-1)/k
+                // ISR: 1/sqrt(k) vs 1/sqrt(k+n-1) => ratio = sqrt((k+n-1)/k)
+                // sqrt(x) < x for x > 1, so ISR ratio should be smaller
+                prop_assert!(isr_ratio <= rrf_ratio + 0.01, // small epsilon for floating point
+                    "ISR ratio {} should be <= RRF ratio {}", isr_ratio, rrf_ratio);
+            }
         }
 
         /// multi variants should match two-list for n=2 (same scores, may differ in order for ties)

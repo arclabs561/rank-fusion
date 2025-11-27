@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.16] - 2025-11-27
+
+### Added
+- **ISR (Inverse Square Root Rank)** fusion: gentler decay than RRF
+  - `isr(&a, &b)` — simple API with k=1 default
+  - `isr_with_config(&a, &b, config)` — customizable k and top_k
+  - `isr_multi` for 3+ lists
+  - `FusionMethod::Isr` and `FusionMethod::isr()` / `isr_with_k(k)`
+  - Formula: `score(d) = Σ 1/sqrt(k + rank)` where rank is 0-indexed
+  - Use when lower ranks should contribute more relative to top positions
+- 10 new ISR tests (unit + property tests)
+
 ## [0.1.15] - 2025-11-27
 
 ### Changed
