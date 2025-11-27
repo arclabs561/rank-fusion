@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.14] - 2025-11-27
+
+### Added
+- **DBSF (Distribution-Based Score Fusion)**: Z-score normalization with mean ± 3σ clipping
+  - `dbsf` and `dbsf_multi` functions for 2+ lists
+  - `FusionMethod::Dbsf` variant for unified API
+  - More robust than min-max normalization when score distributions differ
+- Updated prelude with `dbsf` export
+
 ## [0.1.13] - 2025-11-26
 
 ### Changed

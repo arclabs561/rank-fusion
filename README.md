@@ -62,6 +62,7 @@ let fused = rrf(bm25, dense, RrfConfig::default());
 | `combmnz` | Yes | Reward multi-retriever agreement |
 | `borda` | No | Simple voting baseline |
 | `weighted` | Yes | When one retriever is clearly better |
+| `dbsf` | Yes | Different score distributions (z-score) |
 
 All have `*_multi` variants for 3+ lists.
 
@@ -128,6 +129,13 @@ let fused = method.fuse(&sparse, &dense);
 let method = FusionMethod::Weighted { w1: 0.3, w2: 0.7 };
 let fused = method.fuse(&sparse, &dense);
 ```
+
+## Design
+
+See [DESIGN.md](DESIGN.md) for mathematical foundations:
+- **Rank Aggregation**: Social choice theory (Condorcet, Borda, Kemeny)
+- Why RRF is outlier-resistant
+- Score-based vs rank-based methods
 
 ## Related
 
