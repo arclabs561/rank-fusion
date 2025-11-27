@@ -3,11 +3,11 @@
 //! Combine results from multiple retrievers (BM25, dense, sparse) into a single ranking.
 //!
 //! ```rust
-//! use rank_fusion::{rrf, RrfConfig};
+//! use rank_fusion::rrf;
 //!
 //! let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
 //! let dense = vec![("d2", 0.9), ("d3", 0.8)];
-//! let fused = rrf(bm25, dense, RrfConfig::default());
+//! let fused = rrf(&bm25, &dense);
 //! // d2 ranks highest (appears in both lists)
 //! ```
 //!
@@ -205,7 +205,7 @@ impl FusionConfig {
 /// use rank_fusion::prelude::*;
 /// ```
 pub mod prelude {
-    pub use crate::{borda, combmnz, combsum, dbsf, rrf, weighted};
+    pub use crate::{borda, combmnz, combsum, dbsf, rrf, rrf_with_config, weighted};
     pub use crate::{FusionConfig, FusionError, FusionMethod, Result, RrfConfig, WeightedConfig};
 }
 
@@ -351,12 +351,14 @@ impl FusionMethod {
 // RRF (Reciprocal Rank Fusion)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Reciprocal Rank Fusion of two result lists.
+/// Reciprocal Rank Fusion of two result lists with default config (k=60).
 ///
 /// Formula: `score(d) = Σ 1/(k + rank)` where rank is 0-indexed.
 ///
 /// RRF is robust to score distribution differences between retrievers.
 /// The original scores are ignored; only rank position matters.
+///
+/// Use [`rrf_with_config`] to customize the k parameter.
 ///
 /// # Complexity
 ///
@@ -365,30 +367,54 @@ impl FusionMethod {
 /// # Example
 ///
 /// ```rust
-/// use rank_fusion::{rrf, RrfConfig};
+/// use rank_fusion::rrf;
 ///
 /// let sparse = vec![("d1", 0.9), ("d2", 0.5)];
 /// let dense = vec![("d2", 0.8), ("d3", 0.3)];
 ///
-/// let fused = rrf(sparse, dense, RrfConfig::default());
-/// assert_eq!(fused[0].0, "d2"); // appears in both
+/// let fused = rrf(&sparse, &dense);
+/// assert_eq!(fused[0].0, "d2"); // appears in both lists
+/// ```
+#[must_use]
+pub fn rrf<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+) -> Vec<(I, f32)> {
+    rrf_with_config(results_a, results_b, RrfConfig::default())
+}
+
+/// RRF with custom configuration.
+///
+/// Use this when you need to tune the k parameter:
+/// - Lower k (e.g., 20): Top positions dominate more
+/// - Higher k (e.g., 100): More uniform contribution across positions
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::{rrf_with_config, RrfConfig};
+///
+/// let a = vec![("d1", 0.9), ("d2", 0.5)];
+/// let b = vec![("d2", 0.8), ("d3", 0.3)];
+///
+/// // k=20: emphasize top positions
+/// let fused = rrf_with_config(&a, &b, RrfConfig::new(20));
 /// ```
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
-pub fn rrf<I, A, B>(results_a: A, results_b: B, config: RrfConfig) -> Vec<(I, f32)>
-where
-    I: Clone + Eq + Hash,
-    A: IntoIterator<Item = (I, f32)>,
-    B: IntoIterator<Item = (I, f32)>,
-{
+pub fn rrf_with_config<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+    config: RrfConfig,
+) -> Vec<(I, f32)> {
     let k = config.k as f32;
     let mut scores: HashMap<I, f32> = HashMap::new();
 
-    for (rank, (id, _)) in results_a.into_iter().enumerate() {
-        *scores.entry(id).or_default() += 1.0 / (k + rank as f32);
+    for (rank, (id, _)) in results_a.iter().enumerate() {
+        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
     }
-    for (rank, (id, _)) in results_b.into_iter().enumerate() {
-        *scores.entry(id).or_default() += 1.0 / (k + rank as f32);
+    for (rank, (id, _)) in results_b.iter().enumerate() {
+        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
     }
 
     finalize(scores, config.top_k)
@@ -492,9 +518,16 @@ where
 // Score-based Fusion
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Weighted score fusion with optional normalization.
+/// Weighted score fusion with configurable retriever trust.
 ///
 /// Formula: `score(d) = w_a × norm(s_a) + w_b × norm(s_b)`
+///
+/// Use when you know one retriever is more reliable for your domain.
+/// Weights are normalized to sum to 1.
+///
+/// # Complexity
+///
+/// O(n log n) where n = total items across all lists.
 #[must_use]
 pub fn weighted<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -576,7 +609,15 @@ where
     finalize(scores, top_k)
 }
 
-/// `CombSUM` — sum of normalized scores.
+/// Sum of min-max normalized scores.
+///
+/// Formula: `score(d) = Σ (s - min) / (max - min)`
+///
+/// Use when scores are on similar scales (e.g., all cosine similarities).
+///
+/// # Complexity
+///
+/// O(n log n) where n = total items across all lists.
 #[must_use]
 pub fn combsum<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -585,7 +626,7 @@ pub fn combsum<I: Clone + Eq + Hash>(
     combsum_with_config(results_a, results_b, FusionConfig::default())
 }
 
-/// `CombSUM` with configuration.
+/// CombSUM with configuration.
 #[must_use]
 pub fn combsum_with_config<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -595,7 +636,7 @@ pub fn combsum_with_config<I: Clone + Eq + Hash>(
     combsum_multi(&[results_a, results_b], config)
 }
 
-/// `CombSUM` for 3+ result lists.
+/// CombSUM for 3+ result lists.
 #[must_use]
 pub fn combsum_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
 where
@@ -615,7 +656,16 @@ where
     finalize(scores, config.top_k)
 }
 
-/// `CombMNZ` — sum × number of lists containing the document.
+/// Normalized sum × overlap count (rewards agreement).
+///
+/// Formula: `score(d) = CombSUM(d) × |{lists containing d}|`
+///
+/// Documents appearing in more lists get a multiplier bonus.
+/// Use when overlap signals higher relevance.
+///
+/// # Complexity
+///
+/// O(n log n) where n = total items across all lists.
 #[must_use]
 pub fn combmnz<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -624,7 +674,7 @@ pub fn combmnz<I: Clone + Eq + Hash>(
     combmnz_with_config(results_a, results_b, FusionConfig::default())
 }
 
-/// `CombMNZ` with configuration.
+/// CombMNZ with configuration.
 #[must_use]
 pub fn combmnz_with_config<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -634,7 +684,7 @@ pub fn combmnz_with_config<I: Clone + Eq + Hash>(
     combmnz_multi(&[results_a, results_b], config)
 }
 
-/// `CombMNZ` for 3+ result lists.
+/// CombMNZ for 3+ result lists.
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn combmnz_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
@@ -669,7 +719,16 @@ where
 // Rank-based Fusion
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Borda count — each position contributes `N - rank` points.
+/// Borda count voting — position-based scoring.
+///
+/// Formula: `score(d) = Σ (N - rank)` where N = list length, rank is 0-indexed.
+///
+/// Ignores original scores; only considers position. Simple and robust
+/// when you don't trust score magnitudes.
+///
+/// # Complexity
+///
+/// O(n log n) where n = total items across all lists.
 #[must_use]
 pub fn borda<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -861,7 +920,7 @@ mod tests {
     fn rrf_basic() {
         let a = ranked(&["d1", "d2", "d3"]);
         let b = ranked(&["d2", "d3", "d4"]);
-        let f = rrf(a, b, RrfConfig::default());
+        let f = rrf(&a, &b);
 
         assert!(f.iter().position(|(id, _)| *id == "d2").unwrap() < 2);
     }
@@ -870,7 +929,7 @@ mod tests {
     fn rrf_with_top_k() {
         let a = ranked(&["d1", "d2", "d3"]);
         let b = ranked(&["d2", "d3", "d4"]);
-        let f = rrf(a, b, RrfConfig::default().with_top_k(2));
+        let f = rrf_with_config(&a, &b, RrfConfig::default().with_top_k(2));
 
         assert_eq!(f.len(), 2);
     }
@@ -891,7 +950,7 @@ mod tests {
     fn rrf_score_formula() {
         let a = vec![("d1", 1.0)];
         let b: Vec<(&str, f32)> = vec![];
-        let f = rrf(a, b, RrfConfig::new(60));
+        let f = rrf_with_config(&a, &b, RrfConfig::new(60));
 
         let expected = 1.0 / 60.0;
         assert!((f[0].1 - expected).abs() < 1e-6);
@@ -1055,20 +1114,14 @@ mod tests {
         let empty: Vec<(&str, f32)> = vec![];
         let non_empty = ranked(&["d1"]);
 
-        assert_eq!(
-            rrf(empty.clone(), non_empty.clone(), RrfConfig::default()).len(),
-            1
-        );
-        assert_eq!(rrf(non_empty, empty, RrfConfig::default()).len(), 1);
+        assert_eq!(rrf(&empty, &non_empty).len(), 1);
+        assert_eq!(rrf(&non_empty, &empty).len(), 1);
     }
 
     #[test]
     fn both_empty() {
         let empty: Vec<(&str, f32)> = vec![];
-        assert_eq!(
-            rrf(empty.clone(), empty.clone(), RrfConfig::default()).len(),
-            0
-        );
+        assert_eq!(rrf(&empty, &empty).len(), 0);
         assert_eq!(combsum(&empty, &empty).len(), 0);
         assert_eq!(borda(&empty, &empty).len(), 0);
     }
@@ -1077,7 +1130,7 @@ mod tests {
     fn duplicate_ids_in_same_list() {
         let a = vec![("d1", 1.0), ("d1", 0.5)];
         let b: Vec<(&str, f32)> = vec![];
-        let f = rrf(a, b, RrfConfig::new(60));
+        let f = rrf_with_config(&a, &b, RrfConfig::new(60));
 
         assert_eq!(f.len(), 1);
         let expected = 1.0 / 60.0 + 1.0 / 61.0;
@@ -1109,7 +1162,7 @@ mod tests {
         let b = vec![("d2", 0.9), ("d3", 0.1)];
 
         // Should not panic
-        let _ = rrf(a.clone(), b.clone(), RrfConfig::default());
+        let _ = rrf(&a, &b);
         let _ = combsum(&a, &b);
         let _ = combmnz(&a, &b);
         let _ = borda(&a, &b);
@@ -1121,7 +1174,7 @@ mod tests {
         let b = vec![("d2", f32::NEG_INFINITY), ("d3", 0.1)];
 
         // Should not panic
-        let _ = rrf(a.clone(), b.clone(), RrfConfig::default());
+        let _ = rrf(&a, &b);
         let _ = combsum(&a, &b);
     }
 
@@ -1150,7 +1203,7 @@ mod tests {
         let b = ranked(&["d2", "d3"]);
 
         // k = u32::MAX should not overflow
-        let f = rrf(a, b, RrfConfig::new(u32::MAX));
+        let f = rrf_with_config(&a, &b, RrfConfig::new(u32::MAX));
         assert!(!f.is_empty());
     }
 
@@ -1159,7 +1212,7 @@ mod tests {
         let a = vec![("d1", 1.0)];
         let b = vec![("d1", 1.0)];
 
-        let f = rrf(a.clone(), b.clone(), RrfConfig::default());
+        let f = rrf(&a, &b);
         assert_eq!(f.len(), 1);
 
         let f = combsum(&a, &b);
@@ -1174,7 +1227,7 @@ mod tests {
         let a = vec![("d1", 1.0), ("d2", 0.9)];
         let b = vec![("d3", 1.0), ("d4", 0.9)];
 
-        let f = rrf(a.clone(), b.clone(), RrfConfig::default());
+        let f = rrf(&a, &b);
         assert_eq!(f.len(), 4);
 
         let f = combmnz(&a, &b);
@@ -1187,7 +1240,7 @@ mod tests {
         let a = ranked(&["d1", "d2", "d3"]);
         let b = ranked(&["d1", "d2", "d3"]);
 
-        let f = rrf(a.clone(), b.clone(), RrfConfig::default());
+        let f = rrf(&a, &b);
         // Order should be preserved
         assert_eq!(f[0].0, "d1");
         assert_eq!(f[1].0, "d2");
@@ -1199,7 +1252,7 @@ mod tests {
         let a = ranked(&["d1", "d2", "d3"]);
         let b = ranked(&["d3", "d2", "d1"]);
 
-        let f = rrf(a, b, RrfConfig::default());
+        let f = rrf(&a, &b);
         // All items appear in both lists, so all have same total RRF score
         // d2 at rank 1 in both gets: 2 * 1/(60+1) = 2/61
         // d1 at rank 0,2 gets: 1/60 + 1/62
@@ -1214,7 +1267,7 @@ mod tests {
         let a = ranked(&["d1"]);
         let b = ranked(&["d2"]);
 
-        let f = rrf(a, b, RrfConfig::default().with_top_k(100));
+        let f = rrf_with_config(&a, &b, RrfConfig::default().with_top_k(100));
         assert_eq!(f.len(), 2);
     }
 
@@ -1223,7 +1276,7 @@ mod tests {
         let a = ranked(&["d1", "d2"]);
         let b = ranked(&["d2", "d3"]);
 
-        let f = rrf(a, b, RrfConfig::default().with_top_k(0));
+        let f = rrf_with_config(&a, &b, RrfConfig::default().with_top_k(0));
         assert_eq!(f.len(), 0);
     }
 
@@ -1326,13 +1379,13 @@ mod proptests {
     proptest! {
         #[test]
         fn rrf_output_bounded(a in arb_results(50), b in arb_results(50)) {
-            let result = rrf(a.clone(), b.clone(), RrfConfig::default());
+            let result = rrf(&a, &b);
             prop_assert!(result.len() <= a.len() + b.len());
         }
 
         #[test]
         fn rrf_scores_positive(a in arb_results(50), b in arb_results(50)) {
-            let result = rrf(a, b, RrfConfig::default());
+            let result = rrf(&a, &b);
             for (_, score) in &result {
                 prop_assert!(*score > 0.0);
             }
@@ -1340,8 +1393,8 @@ mod proptests {
 
         #[test]
         fn rrf_commutative(a in arb_results(20), b in arb_results(20)) {
-            let ab = rrf(a.clone(), b.clone(), RrfConfig::default());
-            let ba = rrf(b, a, RrfConfig::default());
+            let ab = rrf(&a, &b);
+            let ba = rrf(&b, &a);
 
             prop_assert_eq!(ab.len(), ba.len());
 
@@ -1356,7 +1409,7 @@ mod proptests {
 
         #[test]
         fn rrf_sorted_descending(a in arb_results(50), b in arb_results(50)) {
-            let result = rrf(a, b, RrfConfig::default());
+            let result = rrf(&a, &b);
             for window in result.windows(2) {
                 prop_assert!(window[0].1 >= window[1].1);
             }
@@ -1364,7 +1417,7 @@ mod proptests {
 
         #[test]
         fn rrf_top_k_respected(a in arb_results(50), b in arb_results(50), k in 1usize..20) {
-            let result = rrf(a, b, RrfConfig::default().with_top_k(k));
+            let result = rrf_with_config(&a, &b, RrfConfig::default().with_top_k(k));
             prop_assert!(result.len() <= k);
         }
 
@@ -1397,8 +1450,8 @@ mod proptests {
         fn rrf_k_uniformity(a in arb_results(10).prop_filter("need items", |v| v.len() >= 2)) {
             let b: Vec<(u32, f32)> = vec![];
 
-            let low_k = rrf(a.clone(), b.clone(), RrfConfig::new(1));
-            let high_k = rrf(a, b, RrfConfig::new(1000));
+            let low_k = rrf_with_config(&a, &b, RrfConfig::new(1));
+            let high_k = rrf_with_config(&a, &b, RrfConfig::new(1000));
 
             if low_k.len() >= 2 && high_k.len() >= 2 {
                 let low_k_range = low_k[0].1 - low_k[low_k.len()-1].1;
@@ -1448,7 +1501,7 @@ mod proptests {
         fn nonempty_output(a in arb_results(5).prop_filter("need items", |v| !v.is_empty())) {
             let b: Vec<(u32, f32)> = vec![];
 
-            prop_assert!(!rrf(a.clone(), b.clone(), RrfConfig::default()).is_empty());
+            prop_assert!(!rrf(&a, &b).is_empty());
             prop_assert!(!combsum(&a, &b).is_empty());
             prop_assert!(!combmnz(&a, &b).is_empty());
             prop_assert!(!borda(&a, &b).is_empty());
@@ -1457,7 +1510,7 @@ mod proptests {
         /// multi variants should match two-list for n=2 (same scores, may differ in order for ties)
         #[test]
         fn multi_matches_two_list(a in arb_results(10), b in arb_results(10)) {
-            let two_list = rrf(a.clone(), b.clone(), RrfConfig::default());
+            let two_list = rrf(&a, &b);
             let multi = rrf_multi(&[a.clone(), b.clone()], RrfConfig::default());
 
             prop_assert_eq!(two_list.len(), multi.len());
@@ -1526,7 +1579,7 @@ mod proptests {
         #[test]
         fn output_always_sorted(a in arb_results(20), b in arb_results(20)) {
             for result in [
-                rrf(a.clone(), b.clone(), RrfConfig::default()),
+                rrf(&a, &b),
                 combsum(&a, &b),
                 combmnz(&a, &b),
                 borda(&a, &b),
@@ -1543,7 +1596,7 @@ mod proptests {
         /// Unique IDs in output (no duplicates)
         #[test]
         fn unique_ids_in_output(a in arb_results(20), b in arb_results(20)) {
-            let result = rrf(a, b, RrfConfig::default());
+            let result = rrf(&a, &b);
             let mut seen = std::collections::HashSet::new();
             for (id, _) in &result {
                 prop_assert!(seen.insert(id), "Duplicate ID in output: {:?}", id);
@@ -1585,7 +1638,7 @@ mod proptests {
             let a = vec![(1u32, 1.0)];
             let b = vec![(1u32, 1.0)];
 
-            let result = rrf(a, b, RrfConfig::new(k));
+            let result = rrf_with_config(&a, &b, RrfConfig::new(k));
             let max_possible = 2.0 / k as f32; // rank 0 in both lists
             prop_assert!(result[0].1 <= max_possible + 1e-6);
         }
@@ -1597,7 +1650,7 @@ mod proptests {
             let a: Vec<(u32, f32)> = (0..n as u32).map(|i| (i, 1.0 - i as f32 * 0.1)).collect();
             let empty: Vec<(u32, f32)> = vec![];
 
-            let rrf_result = rrf(a.clone(), empty, RrfConfig::default());
+            let rrf_result = rrf(&a, &empty);
 
             // Should have same number of unique IDs
             prop_assert_eq!(rrf_result.len(), n);

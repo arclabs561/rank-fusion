@@ -13,12 +13,12 @@ Combine ranked lists from multiple search systems.
 You have multiple retrievers (BM25, dense, sparse) and need one combined ranking.
 
 ```rust
-use rank_fusion::{rrf, RrfConfig};
+use rank_fusion::rrf;
 
 let bm25 = vec![("doc1", 12.5), ("doc2", 11.2)];
 let dense = vec![("doc2", 0.92), ("doc1", 0.80)];
 
-let fused = rrf(bm25, dense, RrfConfig::default());
+let fused = rrf(&bm25, &dense);
 // doc2 ranked high in both → comes first
 ```
 
@@ -67,19 +67,19 @@ All have `*_multi` variants for 3+ lists.
 ## Configuration
 
 ```rust
-use rank_fusion::{rrf, RrfConfig};
+use rank_fusion::{rrf, rrf_with_config, RrfConfig};
 
 let a = vec![("doc1", 1.0)];
 let b = vec![("doc2", 1.0)];
 
 // k=60 is default
-let fused = rrf(a.clone(), b.clone(), RrfConfig::default());
+let fused = rrf(&a, &b);
 
 // k=20: top results dominate
-let fused = rrf(a.clone(), b.clone(), RrfConfig::new(20));
+let fused = rrf_with_config(&a, &b, RrfConfig::new(20));
 
 // k=100: more uniform contribution
-let fused = rrf(a, b, RrfConfig::new(100));
+let fused = rrf_with_config(&a, &b, RrfConfig::new(100));
 ```
 
 ## Multiple Lists

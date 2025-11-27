@@ -25,9 +25,9 @@ fn main() {
     println!("Dense results: {:?}\n", dense_results);
 
     // Method 1: RRF (best for incompatible score scales)
-    let rrf_fused = rrf(
-        bm25_results.clone(),
-        dense_results.clone(),
+    let rrf_fused = rrf_with_config(
+        &bm25_results,
+        &dense_results,
         RrfConfig::default().with_top_k(5),
     );
     println!("RRF fusion (top 5):");

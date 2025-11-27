@@ -3,8 +3,8 @@
 //! These tests verify rank fusion works correctly in real-world scenarios.
 
 use rank_fusion::{
-    borda, combmnz, combmnz_multi, combsum, rrf, rrf_into, rrf_multi, weighted, weighted_multi,
-    FusionConfig, RrfConfig, WeightedConfig,
+    borda, combmnz, combmnz_multi, combsum, rrf, rrf_into, rrf_multi, rrf_with_config, weighted,
+    weighted_multi, FusionConfig, RrfConfig, WeightedConfig,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ fn e2e_hybrid_bm25_dense() {
     ];
 
     // RRF should handle the scale difference
-    let fused = rrf(bm25.clone(), dense.clone(), RrfConfig::default());
+    let fused = rrf(&bm25, &dense);
 
     // doc_rust appears in both lists at top positions
     assert_eq!(
@@ -161,10 +161,10 @@ fn e2e_rrf_k_tuning() {
     let list_b = vec![("other", 0.9)];
 
     // Low k = top positions dominate
-    let low_k = rrf(list_a.clone(), list_b.clone(), RrfConfig::new(1));
+    let low_k = rrf_with_config(&list_a, &list_b, RrfConfig::new(1));
 
     // High k = more uniform contribution
-    let high_k = rrf(list_a, list_b, RrfConfig::new(1000));
+    let high_k = rrf_with_config(&list_a, &list_b, RrfConfig::new(1000));
 
     // With low k, the spread between scores is larger
     let low_k_spread = low_k[0].1 - low_k[low_k.len() - 1].1;
@@ -188,7 +188,7 @@ fn e2e_empty_lists() {
     let empty: Vec<(&str, f32)> = vec![];
 
     // RRF with one empty list
-    let fused = rrf(populated.clone(), empty.clone(), RrfConfig::default());
+    let fused = rrf(&populated, &empty);
     assert_eq!(
         fused.len(),
         2,
@@ -196,7 +196,7 @@ fn e2e_empty_lists() {
     );
 
     // Both empty
-    let both_empty = rrf(empty.clone(), empty, RrfConfig::default());
+    let both_empty = rrf(&empty, &empty);
     assert!(
         both_empty.is_empty(),
         "Empty inputs should produce empty output"
@@ -216,7 +216,7 @@ fn e2e_integer_ids() {
     let list_a: Vec<(u64, f32)> = vec![(1001, 0.9), (1002, 0.8), (1003, 0.7)];
     let list_b: Vec<(u64, f32)> = vec![(1002, 0.95), (1004, 0.85), (1001, 0.75)];
 
-    let fused = rrf(list_a, list_b, RrfConfig::default());
+    let fused = rrf(&list_a, &list_b);
 
     // Verify integer IDs work correctly
     assert!(!fused.is_empty());
@@ -242,7 +242,7 @@ fn e2e_top_k_filtering() {
     let list_b_ref: Vec<_> = list_b.iter().map(|(id, s)| (id.as_str(), *s)).collect();
 
     // Request top 10
-    let fused = rrf(list_a_ref, list_b_ref, RrfConfig::default().with_top_k(10));
+    let fused = rrf_with_config(&list_a_ref, &list_b_ref, RrfConfig::default().with_top_k(10));
 
     assert_eq!(fused.len(), 10, "Should return exactly top_k results");
 }
@@ -257,9 +257,7 @@ fn e2e_deterministic() {
     let list_b = vec![("d2", 0.9), ("d3", 0.8)];
 
     // Run multiple times
-    let results: Vec<_> = (0..10)
-        .map(|_| rrf(list_a.clone(), list_b.clone(), RrfConfig::default()))
-        .collect();
+    let results: Vec<_> = (0..10).map(|_| rrf(&list_a, &list_b)).collect();
 
     // All results should be identical
     for result in &results[1..] {

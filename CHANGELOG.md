@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.15] - 2025-11-27
+
+### Changed
+- **API consistency**: `rrf()` now takes references and uses default config
+  - New: `rrf(&a, &b)` — simple API with k=60 default
+  - New: `rrf_with_config(&a, &b, config)` — customizable k and top_k
+  - Matches `combsum`, `borda`, `dbsf` pattern
+- Improved code documentation throughout
+
 ## [0.1.14] - 2025-11-27
 
 ### Added
