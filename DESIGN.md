@@ -1,5 +1,22 @@
 # Design
 
+## Zero Dependencies
+
+This crate has **zero runtime dependencies**. The entire implementation uses only the Rust standard library.
+
+```
+rank-fusion v0.1.14
+└── (no dependencies)
+```
+
+Why this matters:
+- **Compile time**: Adds ~0.1s to your build
+- **Binary size**: Minimal footprint
+- **Auditability**: No transitive supply chain risk
+- **Portability**: Works on any platform Rust supports
+
+The algorithms (RRF, CombSUM, Borda, etc.) are simple enough that external crates would add overhead without benefit.
+
 ## Mathematical Foundation
 
 Three distinct problems arise in retrieval pipelines. Each belongs to a different mathematical field:

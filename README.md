@@ -7,6 +7,8 @@ Rank fusion for hybrid search.
 [![Docs](https://docs.rs/rank-fusion/badge.svg)](https://docs.rs/rank-fusion)
 [![MSRV](https://img.shields.io/badge/MSRV-1.74-blue)](https://blog.rust-lang.org/2023/11/16/Rust-1.74.0.html)
 
+**Zero dependencies.** Pure Rust standard library.
+
 ## The Score Incompatibility Problem
 
 Hybrid search combines multiple retrievers. The problem: their scores are incompatible.
