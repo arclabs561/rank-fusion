@@ -64,7 +64,11 @@ fn main() {
 
     // Weighted fusion (when you trust one retriever more)
     // 70% dense, 30% BM25
-    let weighted_fused = weighted(&dense_results, &bm25_results, WeightedConfig::new(0.7, 0.3));
+    let weighted_fused = weighted(
+        &dense_results,
+        &bm25_results,
+        WeightedConfig::new(0.7, 0.3),
+    );
 
     println!("\nWeighted (70% dense, 30% BM25):");
     for (id, score) in weighted_fused.iter().take(5) {

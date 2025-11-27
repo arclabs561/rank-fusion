@@ -50,10 +50,7 @@ fn main() {
     );
     println!(
         "Metadata results:{:?}",
-        metadata_results
-            .iter()
-            .map(|(id, _)| id)
-            .collect::<Vec<_>>()
+        metadata_results.iter().map(|(id, _)| id).collect::<Vec<_>>()
     );
 
     // Problem: Different score scales
@@ -94,7 +91,11 @@ fn main() {
 
     // Solution 3: Weighted (when modality reliability known)
     // Image is most reliable for this visual query
-    let weighted_ti = weighted(&text_results, &image_results, WeightedConfig::new(0.3, 0.7));
+    let weighted_ti = weighted(
+        &text_results,
+        &image_results,
+        WeightedConfig::new(0.3, 0.7),
+    );
     let weighted_all = weighted(
         &weighted_ti,
         &metadata_results,
