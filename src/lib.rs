@@ -20,6 +20,7 @@
 //! | [`combmnz`] | Yes | Reward overlap between lists |
 //! | [`borda`] | No | Simple voting |
 //! | [`weighted`] | Yes | Custom retriever weights |
+//! | [`dbsf`] | Yes | Different score distributions |
 //!
 //! All have `*_multi` variants for 3+ lists.
 
@@ -204,8 +205,8 @@ impl FusionConfig {
 /// use rank_fusion::prelude::*;
 /// ```
 pub mod prelude {
-    pub use crate::{borda, combmnz, combsum, rrf, weighted};
-    pub use crate::{FusionConfig, FusionError, Result, RrfConfig, WeightedConfig};
+    pub use crate::{borda, combmnz, combsum, dbsf, rrf, weighted};
+    pub use crate::{FusionConfig, FusionError, FusionMethod, Result, RrfConfig, WeightedConfig};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,6 +253,8 @@ pub enum FusionMethod {
         /// Whether to normalize scores before combining.
         normalize: bool,
     },
+    /// Distribution-Based Score Fusion (z-score normalization).
+    Dbsf,
 }
 
 impl Default for FusionMethod {
@@ -307,6 +310,7 @@ impl FusionMethod {
                 b,
                 WeightedConfig::new(*weight_a, *weight_b).with_normalize(*normalize),
             ),
+            Self::Dbsf => crate::dbsf(a, b),
         }
     }
 
@@ -338,6 +342,7 @@ impl FusionMethod {
                     crate::combsum_multi(lists, FusionConfig::default())
                 }
             }
+            Self::Dbsf => crate::dbsf_multi(lists, FusionConfig::default()),
         }
     }
 }
@@ -698,6 +703,88 @@ where
     }
 
     finalize(scores, config.top_k)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Distribution-Based Score Fusion (DBSF)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Distribution-Based Score Fusion (DBSF).
+///
+/// Uses z-score normalization with mean ± 3σ clipping, then sums scores.
+/// More robust than min-max normalization when score distributions differ.
+///
+/// # Algorithm
+///
+/// For each list:
+/// 1. Compute mean (μ) and standard deviation (σ)
+/// 2. Normalize: `n = (score - μ) / σ`, clipped to [-3, 3]
+/// 3. Sum normalized scores across lists
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::dbsf;
+///
+/// let bm25 = vec![("d1", 15.0), ("d2", 12.0), ("d3", 8.0)];
+/// let dense = vec![("d2", 0.9), ("d3", 0.7), ("d4", 0.5)];
+/// let fused = dbsf(&bm25, &dense);
+/// ```
+#[must_use]
+pub fn dbsf<I: Clone + Eq + Hash>(results_a: &[(I, f32)], results_b: &[(I, f32)]) -> Vec<(I, f32)> {
+    dbsf_with_config(results_a, results_b, FusionConfig::default())
+}
+
+/// DBSF with configuration.
+#[must_use]
+pub fn dbsf_with_config<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+    config: FusionConfig,
+) -> Vec<(I, f32)> {
+    dbsf_multi(&[results_a, results_b], config)
+}
+
+/// DBSF for 3+ result lists.
+#[must_use]
+pub fn dbsf_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    let mut scores: HashMap<I, f32> = HashMap::new();
+
+    for list in lists {
+        let items = list.as_ref();
+        let (mean, std) = zscore_params(items);
+
+        for (id, s) in items {
+            // Z-score normalize and clip to [-3, 3]
+            let z = if std > 1e-9 {
+                ((s - mean) / std).clamp(-3.0, 3.0)
+            } else {
+                0.0 // All scores equal
+            };
+            *scores.entry(id.clone()).or_default() += z;
+        }
+    }
+
+    finalize(scores, config.top_k)
+}
+
+/// Compute mean and standard deviation for z-score normalization.
+#[inline]
+fn zscore_params<I>(results: &[(I, f32)]) -> (f32, f32) {
+    if results.is_empty() {
+        return (0.0, 1.0);
+    }
+
+    let n = results.len() as f32;
+    let mean = results.iter().map(|(_, s)| s).sum::<f32>() / n;
+    let variance = results.iter().map(|(_, s)| (s - mean).powi(2)).sum::<f32>() / n;
+    let std = variance.sqrt();
+
+    (mean, std)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
