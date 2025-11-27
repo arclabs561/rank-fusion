@@ -1,11 +1,11 @@
 [package]
 name = "rank-fusion"
-version = "0.1.16"
+version = "0.1.17"
 edition = "2021"
 rust-version = "1.74"
 license = "MIT OR Apache-2.0"
 description = "Rank fusion algorithms for hybrid search — RRF, ISR, CombMNZ, Borda, DBSF. Zero dependencies."
-keywords = ["vector-search", "hybrid-search", "rrf", "rag", "information-retrieval"]
+keywords = ["vector-search", "hybrid-search", "rrf", "rag", "search"]
 categories = ["algorithms", "data-structures", "mathematics"]
 repository = "https://github.com/arclabs561/rank-fusion"
 readme = "README.md"
