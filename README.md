@@ -95,12 +95,7 @@ let sparse = vec![("d1", 1.0)];
 let fused = rrf_multi(&[bm25, dense, sparse], RrfConfig::default());
 ```
 
-## Design
-
-See [DESIGN.md](DESIGN.md) for:
-- Mathematical foundations (social choice theory)
-- Why RRF over Kemeny optimal
-- Trade-offs between algorithms
+See [DESIGN.md](DESIGN.md) for mathematical foundations and algorithm trade-offs.
 
 ## License
 
