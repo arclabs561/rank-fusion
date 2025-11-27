@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.18] - 2025-11-27
+
+### Added
+- Property tests for CombMNZ and DBSF commutativity
+- Total of 29 property tests now covering all algorithms
+
 ## [0.1.16] - 2025-11-27
 
 ### Added
