@@ -358,6 +358,10 @@ impl FusionMethod {
 /// RRF is robust to score distribution differences between retrievers.
 /// The original scores are ignored; only rank position matters.
 ///
+/// # Complexity
+///
+/// O(n log n) where n = |a| + |b| (dominated by final sort).
+///
 /// # Example
 ///
 /// ```rust
