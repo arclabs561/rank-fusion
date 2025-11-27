@@ -103,10 +103,10 @@ fn main() {
         println!("  {name} (id={id}): {score:.4}");
     }
 
-    println!("\n=== Strategy Notes ===");
-    println!("* RRF: Robust default, equal treatment of signals");
-    println!("* Weighted: When you know signal reliability");
-    println!("* CombSUM: When scores are comparable and calibrated");
+    // When to use which:
+    // - RRF: Don't know relative signal quality, or scores are on different scales
+    // - Weighted: You've measured signal quality (e.g., via A/B test or offline eval)
+    // - CombSUM: Scores are already normalized to same scale (e.g., all [0,1])
 }
 
 fn product_name(id: u32) -> &'static str {

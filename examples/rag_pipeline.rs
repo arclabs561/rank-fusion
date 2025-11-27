@@ -50,7 +50,11 @@ fn main() {
         println!("  doc_{id}: {score:.4}");
     }
 
-    // RRF with custom k (lower k = top ranks matter more)
+    // RRF with custom k
+    // k controls how much top positions dominate:
+    //   k=10: position 0 gets 1/10=0.10, position 5 gets 1/15=0.067 (1.5x difference)
+    //   k=60: position 0 gets 1/60=0.017, position 5 gets 1/65=0.015 (1.1x difference)
+    // Lower k = sharper preference for top ranks
     let rrf_topk = rrf_with_config(&dense_results, &bm25_results, RrfConfig::new(10));
 
     println!("\nRRF (k=10, top-heavy):");
@@ -67,8 +71,8 @@ fn main() {
         println!("  doc_{id}: {score:.4}");
     }
 
-    println!("\n=== Key Observations ===");
-    println!("* doc_205 and doc_101 appear in both -> boosted by RRF");
-    println!("* RRF ignores score magnitudes -> BM25's high scores don't dominate");
-    println!("* Weighted fusion when you know retriever quality differs");
+    // Observations:
+    // - doc_205 and doc_101 appear in both lists, so RRF boosted them
+    // - RRF ignores that BM25 scores (12.5) are much larger than dense (0.92)
+    // - Weighted fusion is useful when you've measured retriever quality
 }

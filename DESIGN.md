@@ -35,9 +35,16 @@ where $k$ is a smoothing constant (default 60) and $\text{rank}_r(d)$ is **0-ind
 - Outlier-resistant — a single high score doesn't dominate
 - No normalization needed
 
-**Why k=60?** Empirically chosen by Cormack et al. (2009) to balance:
-- Low k → top positions dominate
-- High k → positions matter less, rewards consensus
+**Why k=60?** Empirically chosen by Cormack et al. (2009).
+
+The effect of k on position weighting:
+```
+k=10:  rank 0 → 1/10 = 0.100    rank 5 → 1/15 = 0.067   (1.5x ratio)
+k=60:  rank 0 → 1/60 = 0.017    rank 5 → 1/65 = 0.015   (1.1x ratio)
+k=100: rank 0 → 1/100= 0.010    rank 5 → 1/105= 0.0095  (1.05x ratio)
+```
+
+Lower k → top ranks dominate. Higher k → flatter, rewards consensus across lists.
 
 ### CombSUM / CombMNZ
 
@@ -69,7 +76,9 @@ where $\text{rank}_r(d)$ is **0-indexed** (top result = 0).
 \text{DBSF}(d) = |R_d| \cdot \sum_{r \in R_d} \text{clip}\left(\frac{s_r(d) - \mu_r}{\sigma_r}, -3, 3\right)
 ```
 
-Z-score normalization with clipping. More robust than min-max when distributions differ.
+Z-score normalization: subtract mean, divide by standard deviation. This puts different score distributions on comparable scales.
+
+Clipping to [-3, 3] bounds outliers. For a normal distribution, 99.7% of values are within ±3σ. Without clipping, a single extreme score could dominate the fusion.
 
 ## Optimal Solution
 

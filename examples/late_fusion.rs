@@ -106,8 +106,8 @@ fn main() {
         println!("  item_{id}: {score:.4}");
     }
 
-    println!("\n=== Recommendation ===");
-    println!("* RRF: Default choice, robust to score miscalibration");
-    println!("* DBSF: When score distributions matter");
-    println!("* Weighted: When you know modality quality for query type");
+    // Summary:
+    // - RRF uses only rank positions, ignoring score values entirely
+    // - DBSF normalizes by z-score (subtract mean, divide by stddev)
+    // - Weighted assumes you've calibrated relative modality quality
 }

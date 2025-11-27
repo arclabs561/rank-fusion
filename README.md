@@ -82,11 +82,17 @@ $$\text{RRF}(d) = \sum_r \frac{1}{k + \text{rank}_r(d)}$$
 
 Default k=60. Rank is 0-indexed.
 
+k controls how sharply top positions dominate:
+- k=10: rank 0 scores 0.10, rank 5 scores 0.067 (1.5x ratio)
+- k=60: rank 0 scores 0.017, rank 5 scores 0.015 (1.1x ratio)
+
 **CombMNZ**:
 $$\text{score}(d) = \text{count}(d) \times \sum_r s_r(d)$$
 
 **DBSF** (z-score normalization):
 $$s' = \frac{s - \mu}{\sigma}, \quad \text{clipped to } [-3, 3]$$
+
+Clipping to ±3σ bounds outliers (>99.7% of normal distribution is within 3σ).
 
 ## Benchmarks
 
@@ -101,16 +107,10 @@ Apple M3 Max, `cargo bench`:
 | `borda` | 100 | 13μs |
 | `rrf_multi` (5 lists) | 100 | 38μs |
 
-## For Library Authors
+## Vendoring
 
-If you're building a search engine or RAG pipeline:
+If you prefer not to add a dependency:
 
-**Depend on it:**
-```toml
-rank-fusion = "0.1"
-```
-
-**Or vendor it:**
 - `src/lib.rs` is self-contained (~2000 lines)
 - Zero dependencies
 - All algorithms in one file
