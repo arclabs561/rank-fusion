@@ -206,7 +206,9 @@ impl FusionConfig {
 /// use rank_fusion::prelude::*;
 /// ```
 pub mod prelude {
-    pub use crate::{borda, combmnz, combsum, dbsf, isr, isr_with_config, rrf, rrf_with_config, weighted};
+    pub use crate::{
+        borda, combmnz, combsum, dbsf, isr, isr_with_config, rrf, rrf_with_config, weighted,
+    };
     pub use crate::{FusionConfig, FusionError, FusionMethod, Result, RrfConfig, WeightedConfig};
 }
 
@@ -396,10 +398,7 @@ impl FusionMethod {
 /// assert_eq!(fused[0].0, "d2"); // appears in both lists
 /// ```
 #[must_use]
-pub fn rrf<I: Clone + Eq + Hash>(
-    results_a: &[(I, f32)],
-    results_b: &[(I, f32)],
-) -> Vec<(I, f32)> {
+pub fn rrf<I: Clone + Eq + Hash>(results_a: &[(I, f32)], results_b: &[(I, f32)]) -> Vec<(I, f32)> {
     rrf_with_config(results_a, results_b, RrfConfig::default())
 }
 
@@ -564,10 +563,7 @@ where
 /// assert_eq!(fused[0].0, "d2"); // appears in both lists
 /// ```
 #[must_use]
-pub fn isr<I: Clone + Eq + Hash>(
-    results_a: &[(I, f32)],
-    results_b: &[(I, f32)],
-) -> Vec<(I, f32)> {
+pub fn isr<I: Clone + Eq + Hash>(results_a: &[(I, f32)], results_b: &[(I, f32)]) -> Vec<(I, f32)> {
     isr_with_config(results_a, results_b, RrfConfig::new(1))
 }
 

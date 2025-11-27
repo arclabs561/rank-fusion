@@ -242,7 +242,11 @@ fn e2e_top_k_filtering() {
     let list_b_ref: Vec<_> = list_b.iter().map(|(id, s)| (id.as_str(), *s)).collect();
 
     // Request top 10
-    let fused = rrf_with_config(&list_a_ref, &list_b_ref, RrfConfig::default().with_top_k(10));
+    let fused = rrf_with_config(
+        &list_a_ref,
+        &list_b_ref,
+        RrfConfig::default().with_top_k(10),
+    );
 
     assert_eq!(fused.len(), 10, "Should return exactly top_k results");
 }
