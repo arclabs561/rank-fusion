@@ -28,7 +28,7 @@ Key insight: **We don't look at document content.** Only scores and positions.
 \text{RRF}(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}
 ```
 
-where $k$ is a smoothing constant (default 60).
+where $k$ is a smoothing constant (default 60) and $\text{rank}_r(d)$ is **0-indexed** (top result = 0).
 
 **Properties:**
 - Ignores score magnitudes — only position matters
@@ -58,6 +58,8 @@ where $R_d$ is the set of lists containing $d$, and $\text{norm}$ is min-max nor
 ```math
 \text{Borda}(d) = \sum_{r \in R} (N - \text{rank}_r(d))
 ```
+
+where $\text{rank}_r(d)$ is **0-indexed** (top result = 0).
 
 **Origin:** Jean-Charles de Borda, 1770. Used in elections.
 
