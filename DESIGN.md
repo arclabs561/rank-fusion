@@ -1,179 +1,124 @@
 # Design
 
-## Zero Dependencies
+## Dependencies
 
-This crate has **zero runtime dependencies**. The entire implementation uses only the Rust standard library.
+**Zero.** Pure Rust standard library.
 
-```
-rank-fusion v0.1.14
-└── (no dependencies)
-```
+| Metric | Value |
+|--------|-------|
+| Compile time | ~0.1s |
+| Binary size | ~10KB |
+| Transitive deps | 0 |
 
-Why this matters:
-- **Compile time**: Adds ~0.1s to your build
-- **Binary size**: Minimal footprint
-- **Auditability**: No transitive supply chain risk
-- **Portability**: Works on any platform Rust supports
+Why: The algorithms are simple. External crates add overhead without benefit.
 
-The algorithms (RRF, CombSUM, Borda, etc.) are simple enough that external crates would add overhead without benefit.
+## Problem Space
 
-## Mathematical Foundation
+Given $n$ ranked lists from different retrievers, produce one combined ranking.
 
-Three distinct problems arise in retrieval pipelines. Each belongs to a different mathematical field:
+This is the **rank aggregation** problem from social choice theory — the same mathematics behind voting systems (Condorcet, Borda) and sports rankings (Elo).
 
-| Problem | Field | Input | Output | Crate |
-|---------|-------|-------|--------|-------|
-| **Aggregation** | Social Choice Theory | n rankings | 1 ranking | rank-fusion |
-| **Scoring** | Learning to Rank | (query, doc) pairs | scores | rank-refine |
-| **Selection** | Submodular Optimization | set + candidates | diverse subset | rank-refine |
-
-### 1. Rank Aggregation (This Crate)
-
-**Problem**: Given n ranked lists from different retrievers, produce one consensus ranking.
-
-This is the [rank aggregation problem](https://en.wikipedia.org/wiki/Rank_aggregation) from social choice theory. The same mathematics underlies:
-- Voting systems (Condorcet, Borda, 18th century)
-- Sports rankings (Elo, Glicko)
-- Metasearch engines (2000s)
-
-**Key insight**: We don't look at document content. Only scores and ranks.
-
-| Algorithm | Origin | Key Property |
-|-----------|--------|--------------|
-| Borda | Jean-Charles de Borda, 1770 | Position-based scoring |
-| RRF | Cormack et al., 2009 | Outlier-resistant, scale-agnostic |
-| CombSUM/MNZ | Fox & Shaw, 1994 | Score combination with overlap bonus |
-| DBSF | Weaviate, 2023 | Z-score normalization |
-
-**Optimal solution**: The [Kemeny optimal ranking](https://en.wikipedia.org/wiki/Kemeny%E2%80%93Young_method) minimizes Kendall tau distance to all input rankings. It's NP-hard to compute, so we use approximations like RRF.
-
-### 2. Scoring / Reranking (rank-refine)
-
-**Problem**: Given a query and candidate documents, compute relevance scores.
-
-This is [learning to rank](https://en.wikipedia.org/wiki/Learning_to_rank) — a machine learning problem. Methods differ in what they model:
-
-| Method | Input | Complexity | Quality |
-|--------|-------|------------|---------|
-| Dense (dot/cosine) | 1 vec × 1 vec | O(d) | Good |
-| Late Interaction (MaxSim) | 1 vec × n tokens | O(q × d) | Better |
-| Cross-encoder | text pair | O(n) inference | Best |
-
-**Key insight**: We look at document content (embeddings). Scoring is a function f(query, doc) → ℝ.
-
-### 3. Diversity Selection (rank-refine.diversity)
-
-**Problem**: Given a scored candidate set, select a diverse subset that balances relevance and variety.
-
-This is [submodular optimization](https://en.wikipedia.org/wiki/Submodular_set_function). The mathematical structure:
-
-```
-f(S ∪ {x}) - f(S) ≤ f(T ∪ {x}) - f(T)  for T ⊆ S
-```
-
-Selecting an item has **diminishing returns** as more items are already selected.
-
-| Algorithm | Formulation | Properties |
-|-----------|-------------|------------|
-| MMR | argmax λ·rel(d) - (1-λ)·max_s sim(d,s) | Greedy, O(n×k) |
-| DPP | P(S) ∝ det(L_S) | Probabilistic, expensive |
-| Facility Location | max Σ_i max_{j∈S} sim(i,j) | Coverage-optimal |
-
-**Key insight**: We look at inter-item similarity. Selection is a set function f(S) → ℝ, not pairwise.
-
-## Why Two Crates, Not Three?
-
-We considered a separate `rank-select` crate for diversity. Arguments against:
-
-1. **Code size**: MMR is ~150 lines. Not enough to justify a crate.
-2. **Shared infrastructure**: Diversity uses the same SIMD cosine from rank-refine.
-3. **Usage pattern**: Users typically rerank then diversify in the same pipeline.
-
-The mathematical distinction is clear, but the practical separation isn't justified.
-
-## Pipeline Position
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           RETRIEVAL PIPELINE                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌───────────┐ │
-│  │  Retrieval  │     │   Fusion    │     │  Reranking  │     │ Selection │ │
-│  │   (ANN)     │────▶│ rank-fusion │────▶│ rank-refine │────▶│   (MMR)   │ │
-│  │  millions   │     │  combine    │     │  rescore    │     │ diversify │ │
-│  └─────────────┘     └─────────────┘     └─────────────┘     └───────────┘ │
-│        ↓                   ↓                   ↓                   ↓       │
-│     1000s              100-500              50-100               10-20     │
-│                                                                             │
-│  Problem:           Aggregation          Scoring              Selection    │
-│  Field:             Social Choice        Learning to Rank     Submodular   │
-│  Content:           No                   Yes                  Yes (inter)  │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-## API Design Principles
-
-### 1. Scores vs Ranks
-
-Some algorithms use scores, others only ranks:
-
-```rust
-// Score-based: preserves magnitude information
-combsum(&[(d1, 0.9), (d2, 0.1)], &[(d2, 0.8), (d3, 0.2)])
-
-// Rank-based: only position matters
-rrf(&[(d1, 0.9), (d2, 0.1)], &[(d2, 0.8), (d3, 0.2)])
-// Score values ignored; d1 is rank 1, d2 is rank 2
-```
-
-Rank-based methods (RRF, Borda) are preferred when scores are incomparable.
-
-### 2. Generic over ID Type
-
-All functions are generic over `I: Clone + Eq + Hash`:
-
-```rust
-rrf::<&str>(&[("doc1", 0.9)], &[("doc2", 0.8)])  // String IDs
-rrf::<u64>(&[(1, 0.9)], &[(2, 0.8)])              // Integer IDs
-rrf::<Uuid>(&[(uuid1, 0.9)], &[(uuid2, 0.8)])    // Custom IDs
-```
-
-### 3. Two-List vs Multi-List
-
-Most algorithms have both variants:
-
-```rust
-rrf(&a, &b)           // Two lists (common case)
-rrf_multi(&[a, b, c]) // Three+ lists
-```
-
-Two-list is optimized separately (no Vec allocation for list references).
+Key insight: **We don't look at document content.** Only scores and positions.
 
 ## Algorithms
 
-| Function | Method | Uses Scores | Best For |
-|----------|--------|-------------|----------|
-| `rrf` | 1/(k+rank) | No | Incompatible score scales |
-| `combsum` | sum(norm(scores)) | Yes | Similar scales, trust scores |
-| `combmnz` | sum × count | Yes | Reward overlap between lists |
-| `borda` | N-rank voting | No | Simple voting |
-| `weighted` | w·norm(score) | Yes | Custom retriever weights |
-| `dbsf` | sum(z-score) | Yes | Different score distributions |
+### Reciprocal Rank Fusion (RRF)
+
+```math
+\text{RRF}(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}
+```
+
+where $k$ is a smoothing constant (default 60).
+
+**Properties:**
+- Ignores score magnitudes — only position matters
+- Outlier-resistant — a single high score doesn't dominate
+- No normalization needed
+
+**Why k=60?** Empirically chosen by Cormack et al. (2009) to balance:
+- Low k → top positions dominate
+- High k → positions matter less, rewards consensus
+
+### CombSUM / CombMNZ
+
+```math
+\text{CombSUM}(d) = \sum_{r \in R} \text{norm}(s_r(d))
+```
+
+```math
+\text{CombMNZ}(d) = |R_d| \cdot \sum_{r \in R_d} \text{norm}(s_r(d))
+```
+
+where $R_d$ is the set of lists containing $d$, and $\text{norm}$ is min-max normalization.
+
+**When to use:** Scores are comparable (same scale, same meaning).
+
+### Borda Count
+
+```math
+\text{Borda}(d) = \sum_{r \in R} (N - \text{rank}_r(d))
+```
+
+**Origin:** Jean-Charles de Borda, 1770. Used in elections.
+
+### DBSF (Distribution-Based Score Fusion)
+
+```math
+\text{DBSF}(d) = |R_d| \cdot \sum_{r \in R_d} \text{clip}\left(\frac{s_r(d) - \mu_r}{\sigma_r}, -3, 3\right)
+```
+
+Z-score normalization with clipping. More robust than min-max when distributions differ.
+
+## Optimal Solution
+
+The theoretically optimal ranking is the **Kemeny optimal** — the ranking that minimizes total Kendall tau distance to all input rankings:
+
+```math
+K^* = \arg\min_{K} \sum_{r \in R} \tau(K, r)
+```
+
+This is NP-hard to compute. RRF is a practical approximation.
+
+## Complexity
+
+| Algorithm | Time | Space |
+|-----------|------|-------|
+| RRF | O(n log n) | O(n) |
+| CombSUM | O(n log n) | O(n) |
+| Borda | O(n log n) | O(n) |
+
+All dominated by the final sort.
+
+## API Design
+
+### Generic IDs
+
+Functions accept any `I: Clone + Eq + Hash`:
+
+```rust
+rrf::<&str>(&[("doc1", 0.9)], &[("doc2", 0.8)])
+rrf::<u64>(&[(1, 0.9)], &[(2, 0.8)])
+```
+
+### Two-List vs Multi-List
+
+```rust
+rrf(&a, &b)           // optimized, no Vec allocation
+rrf_multi(&[a, b, c]) // general case
+```
+
+## Alternatives Considered
+
+**Why not use a voting theory crate?**
+- Overkill for rank fusion (we don't need full Condorcet, Schulze, etc.)
+- Would add dependencies for little benefit
+
+**Why not use HashMap from hashbrown?**
+- std HashMap is fast enough for typical list sizes (<10K items)
+- Avoiding deps keeps compile times minimal
 
 ## References
 
-### Rank Aggregation (Social Choice)
-- Condorcet, 1785 — Pairwise majority preferences
-- Borda, 1770 — Positional scoring
-- [Kemeny, 1959](https://en.wikipedia.org/wiki/Kemeny%E2%80%93Young_method) — Optimal aggregation (NP-hard)
-- [Dwork et al., 2001](https://dl.acm.org/doi/10.1145/371920.372165) — Rank aggregation methods
-
-### Fusion in IR
-- [Fox & Shaw, 1994](https://dl.acm.org/doi/10.1145/188490.188561) — CombSUM, CombMNZ
-- [Cormack et al., 2009](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf) — RRF
-- [Bruch et al., 2022](https://arxiv.org/abs/2210.11934) — An analysis of fusion functions
-
-### Submodular Optimization
-- [Nemhauser et al., 1978](https://link.springer.com/article/10.1007/BF01588971) — Greedy submodular maximization
-- [Carbonell & Goldstein, 1998](https://dl.acm.org/doi/10.1145/290941.291025) — MMR
+- Cormack, Clarke, Buettcher (2009). [Reciprocal Rank Fusion](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)
+- Fox & Shaw (1994). Combination of Multiple Searches
+- Dwork et al. (2001). [Rank Aggregation Methods for the Web](https://dl.acm.org/doi/10.1145/371920.372165)
