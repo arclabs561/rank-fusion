@@ -1,7 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use rank_fusion::{
-    borda, combmnz, combsum, rrf, rrf_into, rrf_multi, weighted, RrfConfig, WeightedConfig,
-};
+use rank_fusion::{borda, combmnz, combsum, rrf, rrf_with_config, RrfConfig};
 
 fn ranked(n: usize, prefix: &str) -> Vec<(String, f32)> {
     (0..n)
@@ -25,19 +23,11 @@ fn bench_algorithms(c: &mut Criterion) {
         let b = with_overlap(ranked(n, "b"), n, 0.3);
 
         g.bench_with_input(BenchmarkId::new("rrf", n), &n, |bench, _| {
-            bench.iter(|| black_box(rrf(a.clone(), b.clone(), RrfConfig::default())));
+            bench.iter(|| black_box(rrf(&a, &b)));
         });
 
-        g.bench_with_input(BenchmarkId::new("rrf_into", n), &n, |bench, _| {
-            let mut out = Vec::with_capacity(n * 2);
-            bench.iter(|| {
-                rrf_into(&a, &b, RrfConfig::default(), &mut out);
-                black_box(out.len())
-            });
-        });
-
-        g.bench_with_input(BenchmarkId::new("weighted", n), &n, |bench, _| {
-            bench.iter(|| black_box(weighted(&a, &b, WeightedConfig::default())));
+        g.bench_with_input(BenchmarkId::new("rrf_k20", n), &n, |bench, _| {
+            bench.iter(|| black_box(rrf_with_config(&a, &b, RrfConfig::new(20))));
         });
 
         g.bench_with_input(BenchmarkId::new("combsum", n), &n, |bench, _| {
@@ -57,26 +47,27 @@ fn bench_algorithms(c: &mut Criterion) {
 }
 
 fn bench_multi(c: &mut Criterion) {
-    use rank_fusion::{borda_multi, combmnz_multi, combsum_multi, FusionConfig};
+    use rank_fusion::{borda_multi, combmnz_multi, combsum_multi, rrf_multi, FusionConfig};
 
     let mut g = c.benchmark_group("multi");
 
     let lists: Vec<Vec<(String, f32)>> = (0..5).map(|i| ranked(100, &format!("list{i}"))).collect();
+    let list_refs: Vec<&[(String, f32)]> = lists.iter().map(|v| v.as_slice()).collect();
 
     g.bench_function("rrf_multi_5x100", |bench| {
-        bench.iter(|| black_box(rrf_multi(&lists, RrfConfig::default())));
+        bench.iter(|| black_box(rrf_multi(&list_refs, RrfConfig::default())));
     });
 
     g.bench_function("borda_multi_5x100", |bench| {
-        bench.iter(|| black_box(borda_multi(&lists, FusionConfig::default())));
+        bench.iter(|| black_box(borda_multi(&list_refs, FusionConfig::default())));
     });
 
     g.bench_function("combsum_multi_5x100", |bench| {
-        bench.iter(|| black_box(combsum_multi(&lists, FusionConfig::default())));
+        bench.iter(|| black_box(combsum_multi(&list_refs, FusionConfig::default())));
     });
 
     g.bench_function("combmnz_multi_5x100", |bench| {
-        bench.iter(|| black_box(combmnz_multi(&lists, FusionConfig::default())));
+        bench.iter(|| black_box(combmnz_multi(&list_refs, FusionConfig::default())));
     });
 
     g.finish();
