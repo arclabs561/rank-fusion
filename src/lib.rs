@@ -1069,6 +1069,71 @@ mod tests {
         assert!((f[0].1 - expected).abs() < 1e-6);
     }
 
+    /// Verify RRF score formula: score(d) = Σ 1/(k + rank) for all lists containing d
+    #[test]
+    fn rrf_exact_score_computation() {
+        // d1 at rank 0 in list A, rank 2 in list B
+        // With k=60: score = 1/(60+0) + 1/(60+2) = 1/60 + 1/62
+        let a = vec![("d1", 0.9), ("d2", 0.8), ("d3", 0.7)];
+        let b = vec![("d4", 0.9), ("d5", 0.8), ("d1", 0.7)];
+
+        let f = rrf_with_config(&a, &b, RrfConfig::new(60));
+
+        // Find d1's score
+        let d1_score = f.iter().find(|(id, _)| *id == "d1").unwrap().1;
+        let expected = 1.0 / 60.0 + 1.0 / 62.0; // rank 0 in A + rank 2 in B
+
+        assert!(
+            (d1_score - expected).abs() < 1e-6,
+            "d1 score {} != expected {}",
+            d1_score,
+            expected
+        );
+    }
+
+    /// Verify ISR score formula: score(d) = Σ 1/sqrt(k + rank)
+    #[test]
+    fn isr_exact_score_computation() {
+        // d1 at rank 0 in list A, rank 2 in list B
+        // With k=1: score = 1/sqrt(1+0) + 1/sqrt(1+2) = 1 + 1/sqrt(3)
+        let a = vec![("d1", 0.9), ("d2", 0.8), ("d3", 0.7)];
+        let b = vec![("d4", 0.9), ("d5", 0.8), ("d1", 0.7)];
+
+        let f = isr_with_config(&a, &b, RrfConfig::new(1));
+
+        let d1_score = f.iter().find(|(id, _)| *id == "d1").unwrap().1;
+        let expected = 1.0 / 1.0_f32.sqrt() + 1.0 / 3.0_f32.sqrt();
+
+        assert!(
+            (d1_score - expected).abs() < 1e-6,
+            "d1 score {} != expected {}",
+            d1_score,
+            expected
+        );
+    }
+
+    /// Verify Borda score formula: score(d) = Σ (N - rank) where N = list length
+    #[test]
+    fn borda_exact_score_computation() {
+        // List A: 3 items, d1 at rank 0 -> score = 3-0 = 3
+        // List B: 4 items, d1 at rank 2 -> score = 4-2 = 2
+        // Total d1 score = 3 + 2 = 5
+        let a = vec![("d1", 0.9), ("d2", 0.8), ("d3", 0.7)];
+        let b = vec![("d4", 0.9), ("d5", 0.8), ("d1", 0.7), ("d6", 0.6)];
+
+        let f = borda(&a, &b);
+
+        let d1_score = f.iter().find(|(id, _)| *id == "d1").unwrap().1;
+        let expected = 3.0 + 2.0; // (3-0) + (4-2)
+
+        assert!(
+            (d1_score - expected).abs() < 1e-6,
+            "d1 score {} != expected {}",
+            d1_score,
+            expected
+        );
+    }
+
     #[test]
     fn rrf_weighted_applies_weights() {
         // d1 appears in list_a (rank 0), d2 appears in list_b (rank 0)
@@ -1785,25 +1850,30 @@ mod proptests {
         }
 
         /// ISR should have gentler decay than RRF (higher relative contribution from lower ranks)
+        /// Test uses unique IDs to isolate the decay function comparison
         #[test]
-        fn isr_gentler_than_rrf(a in arb_results(10).prop_filter("need items", |v| v.len() >= 3)) {
+        fn isr_gentler_than_rrf(n in 3usize..20) {
+            // Create list with unique IDs at sequential ranks
+            let a: Vec<(u32, f32)> = (0..n as u32).map(|i| (i, 1.0)).collect();
             let b: Vec<(u32, f32)> = vec![];
 
             let rrf_result = rrf_with_config(&a, &b, RrfConfig::new(1));
             let isr_result = isr_with_config(&a, &b, RrfConfig::new(1));
 
-            if rrf_result.len() >= 2 && isr_result.len() >= 2 {
-                // Compare ratio of first to last score
-                let rrf_ratio = rrf_result[0].1 / rrf_result.last().unwrap().1;
-                let isr_ratio = isr_result[0].1 / isr_result.last().unwrap().1;
+            // Both should have all n unique items
+            prop_assert_eq!(rrf_result.len(), n);
+            prop_assert_eq!(isr_result.len(), n);
 
-                // ISR should have smaller ratio (gentler decay)
-                // RRF: 1/k vs 1/(k+n-1) => ratio = (k+n-1)/k
-                // ISR: 1/sqrt(k) vs 1/sqrt(k+n-1) => ratio = sqrt((k+n-1)/k)
-                // sqrt(x) < x for x > 1, so ISR ratio should be smaller
-                prop_assert!(isr_ratio <= rrf_ratio + 0.01, // small epsilon for floating point
-                    "ISR ratio {} should be <= RRF ratio {}", isr_ratio, rrf_ratio);
-            }
+            // Compare ratio of first to last score
+            let rrf_ratio = rrf_result[0].1 / rrf_result.last().unwrap().1;
+            let isr_ratio = isr_result[0].1 / isr_result.last().unwrap().1;
+
+            // ISR should have smaller ratio (gentler decay)
+            // RRF: 1/k vs 1/(k+n-1) => ratio = (k+n-1)/k = n for k=1
+            // ISR: 1/sqrt(k) vs 1/sqrt(k+n-1) => ratio = sqrt(k+n-1)/sqrt(k) = sqrt(n) for k=1
+            // sqrt(n) < n for n > 1, so ISR ratio should be smaller
+            prop_assert!(isr_ratio < rrf_ratio,
+                "ISR ratio {} should be < RRF ratio {} for n={}", isr_ratio, rrf_ratio, n);
         }
 
         /// multi variants should match two-list for n=2 (same scores, may differ in order for ties)
