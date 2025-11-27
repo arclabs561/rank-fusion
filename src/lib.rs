@@ -27,8 +27,8 @@
 //!
 //! # Performance Notes
 //!
-//! OpenSearch benchmarks (BEIR) show RRF is ~3-4% lower NDCG than score-based
-//! fusion (CombSUM), but ~1-2% faster. RRF excels when score scales are
+//! `OpenSearch` benchmarks (BEIR) show RRF is ~3-4% lower NDCG than score-based
+//! fusion (`CombSUM`), but ~1-2% faster. RRF excels when score scales are
 //! incompatible or unknown. See [OpenSearch RRF blog](https://opensearch.org/blog/introducing-reciprocal-rank-fusion-hybrid-search/).
 
 use std::collections::HashMap;
@@ -108,7 +108,7 @@ impl RrfConfig {
         self
     }
 
-    /// Limit output to top_k results.
+    /// Limit output to `top_k` results.
     #[must_use]
     pub const fn with_top_k(mut self, top_k: usize) -> Self {
         self.top_k = Some(top_k);
@@ -178,7 +178,7 @@ impl WeightedConfig {
         self
     }
 
-    /// Limit output to top_k results.
+    /// Limit output to `top_k` results.
     #[must_use]
     pub const fn with_top_k(mut self, top_k: usize) -> Self {
         self.top_k = Some(top_k);
@@ -186,7 +186,7 @@ impl WeightedConfig {
     }
 }
 
-/// Configuration for rank-based fusion (Borda, CombSUM, CombMNZ).
+/// Configuration for rank-based fusion (Borda, `CombSUM`, `CombMNZ`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct FusionConfig {
     /// Maximum results to return (None = all).
@@ -194,7 +194,7 @@ pub struct FusionConfig {
 }
 
 impl FusionConfig {
-    /// Limit output to top_k results.
+    /// Limit output to `top_k` results.
     #[must_use]
     pub const fn with_top_k(mut self, top_k: usize) -> Self {
         self.top_k = Some(top_k);
@@ -252,9 +252,9 @@ pub enum FusionMethod {
         /// Smoothing constant (default: 1).
         k: u32,
     },
-    /// CombSUM — sum of normalized scores.
+    /// `CombSUM` — sum of normalized scores.
     CombSum,
-    /// CombMNZ — sum × overlap count.
+    /// `CombMNZ` — sum × overlap count.
     CombMnz,
     /// Borda count — N - rank points.
     Borda,
@@ -741,7 +741,7 @@ pub fn combsum<I: Clone + Eq + Hash>(
     combsum_with_config(results_a, results_b, FusionConfig::default())
 }
 
-/// CombSUM with configuration.
+/// `CombSUM` with configuration.
 #[must_use]
 pub fn combsum_with_config<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -751,7 +751,7 @@ pub fn combsum_with_config<I: Clone + Eq + Hash>(
     combsum_multi(&[results_a, results_b], config)
 }
 
-/// CombSUM for 3+ result lists.
+/// `CombSUM` for 3+ result lists.
 #[must_use]
 pub fn combsum_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
 where
@@ -789,7 +789,7 @@ pub fn combmnz<I: Clone + Eq + Hash>(
     combmnz_with_config(results_a, results_b, FusionConfig::default())
 }
 
-/// CombMNZ with configuration.
+/// `CombMNZ` with configuration.
 #[must_use]
 pub fn combmnz_with_config<I: Clone + Eq + Hash>(
     results_a: &[(I, f32)],
@@ -799,7 +799,7 @@ pub fn combmnz_with_config<I: Clone + Eq + Hash>(
     combmnz_multi(&[results_a, results_b], config)
 }
 
-/// CombMNZ for 3+ result lists.
+/// `CombMNZ` for 3+ result lists.
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn combmnz_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
@@ -990,14 +990,13 @@ fn sort_scored_desc<I>(results: &mut [(I, f32)]) {
     results.sort_by(|a, b| b.1.total_cmp(&a.1));
 }
 
-/// Returns (scale, offset) for min-max normalization: `(x - offset) * scale`.
-#[inline]
-/// Returns (norm_factor, offset) for min-max normalization.
+/// Returns `(norm_factor, offset)` for min-max normalization.
 ///
-/// Normalized score = (score - offset) * norm_factor
+/// Normalized score = `(score - offset) * norm_factor`
 ///
 /// For single-element lists or lists where all scores are equal,
-/// returns (0.0, 0.0) so each element contributes its raw score.
+/// returns `(0.0, 0.0)` so each element contributes its raw score.
+#[inline]
 fn min_max_params<I>(results: &[(I, f32)]) -> (f32, f32) {
     if results.is_empty() {
         return (1.0, 0.0);
