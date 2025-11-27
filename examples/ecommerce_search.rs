@@ -68,12 +68,8 @@ fn main() {
     );
 
     // RRF: Equal weight to all signals
-    let signals: Vec<&[(u32, f32)]> = vec![
-        &text_relevance,
-        &popularity,
-        &recency,
-        &personalization,
-    ];
+    let signals: Vec<&[(u32, f32)]> =
+        vec![&text_relevance, &popularity, &recency, &personalization];
     let rrf_result = rrf_multi(&signals, RrfConfig::default());
 
     println!("\nRRF fusion (equal weight):");
