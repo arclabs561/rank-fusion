@@ -75,7 +75,7 @@ $$s' = \frac{s - \mu}{\sigma}, \quad \text{clipped to } [-3, 3]$$
 
 ## Benchmarks
 
-Apple M3, `cargo bench`:
+M3 Max, `cargo bench`:
 
 | Operation | Items | Time |
 |-----------|-------|------|
