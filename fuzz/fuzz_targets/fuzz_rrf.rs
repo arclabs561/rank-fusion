@@ -2,7 +2,7 @@
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use rank_fusion::{rrf, RrfConfig};
+use rank_fusion::{rrf_with_config, RrfConfig};
 
 #[derive(Arbitrary, Debug)]
 struct Input {
@@ -17,6 +17,6 @@ fuzz_target!(|input: Input| {
     let config = RrfConfig::new(k);
 
     // Should not panic
-    let _ = rrf(input.list_a, input.list_b, config);
+    let _ = rrf_with_config(&input.list_a, &input.list_b, config);
 });
 
