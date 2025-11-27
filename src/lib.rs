@@ -24,6 +24,12 @@
 //! | [`dbsf`] | Yes | Different score distributions |
 //!
 //! All have `*_multi` variants for 3+ lists.
+//!
+//! # Performance Notes
+//!
+//! OpenSearch benchmarks (BEIR) show RRF is ~3-4% lower NDCG than score-based
+//! fusion (CombSUM), but ~1-2% faster. RRF excels when score scales are
+//! incompatible or unknown. See [OpenSearch RRF blog](https://opensearch.org/blog/introducing-reciprocal-rank-fusion-hybrid-search/).
 
 use std::collections::HashMap;
 use std::hash::Hash;
