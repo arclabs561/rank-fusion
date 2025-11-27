@@ -1736,6 +1736,40 @@ mod proptests {
             }
         }
 
+        /// CombMNZ should be commutative (argument order doesn't change scores)
+        #[test]
+        fn combmnz_commutative(a in arb_results(20), b in arb_results(20)) {
+            let ab = combmnz(&a, &b);
+            let ba = combmnz(&b, &a);
+
+            let ab_map: HashMap<_, _> = ab.into_iter().collect();
+            let ba_map: HashMap<_, _> = ba.into_iter().collect();
+
+            prop_assert_eq!(ab_map.len(), ba_map.len());
+            for (id, score_ab) in &ab_map {
+                let score_ba = ba_map.get(id).expect("same keys");
+                prop_assert!((score_ab - score_ba).abs() < 1e-5,
+                    "CombMNZ not commutative for id {:?}: {} vs {}", id, score_ab, score_ba);
+            }
+        }
+
+        /// DBSF should be commutative (argument order doesn't change normalized scores)
+        #[test]
+        fn dbsf_commutative(a in arb_results(20), b in arb_results(20)) {
+            let ab = dbsf(&a, &b);
+            let ba = dbsf(&b, &a);
+
+            let ab_map: HashMap<_, _> = ab.into_iter().collect();
+            let ba_map: HashMap<_, _> = ba.into_iter().collect();
+
+            prop_assert_eq!(ab_map.len(), ba_map.len());
+            for (id, score_ab) in &ab_map {
+                let score_ba = ba_map.get(id).expect("same keys");
+                prop_assert!((score_ab - score_ba).abs() < 1e-5,
+                    "DBSF not commutative for id {:?}: {} vs {}", id, score_ab, score_ba);
+            }
+        }
+
         #[test]
         fn rrf_k_uniformity(a in arb_results(10).prop_filter("need items", |v| v.len() >= 2)) {
             let b: Vec<(u32, f32)> = vec![];
