@@ -36,8 +36,8 @@ fn main() {
     }
 
     // Method 2: Weighted score fusion
-    let weighted_score =
-        weighted_multi(&[(&bm25, 0.7), (&dense, 0.3)], true, None).expect("valid weights");
+    let weighted_score = weighted_multi(&[(&bm25, 0.7), (&dense, 0.3)], true, None)
+        .expect("valid weights");
 
     println!("\nWeighted score fusion (70% BM25, 30% dense):");
     for (id, score) in &weighted_score {
@@ -45,8 +45,8 @@ fn main() {
     }
 
     // Method 3: Equal weights (baseline)
-    let equal_weighted =
-        weighted_multi(&[(&bm25, 0.5), (&dense, 0.5)], true, None).expect("valid weights");
+    let equal_weighted = weighted_multi(&[(&bm25, 0.5), (&dense, 0.5)], true, None)
+        .expect("valid weights");
 
     println!("\nEqual weights (50/50):");
     for (id, score) in &equal_weighted {
@@ -56,3 +56,4 @@ fn main() {
     println!("\nNote: BM25-heavy weighting favors 'iphone_15_pro' (exact match).");
     println!("Equal weights give more influence to dense retriever's semantic matches.");
 }
+

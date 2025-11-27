@@ -6,13 +6,25 @@ use rank_fusion::{borda_multi, combmnz_multi, rrf_multi, FusionConfig, RrfConfig
 
 fn main() {
     // BM25 lexical search
-    let bm25 = vec![("doc_rust", 15.2), ("doc_python", 12.1), ("doc_go", 8.5)];
+    let bm25 = vec![
+        ("doc_rust", 15.2),
+        ("doc_python", 12.1),
+        ("doc_go", 8.5),
+    ];
 
     // Dense vector search (e.g., OpenAI embeddings)
-    let dense = vec![("doc_rust", 0.95), ("doc_cpp", 0.88), ("doc_python", 0.82)];
+    let dense = vec![
+        ("doc_rust", 0.95),
+        ("doc_cpp", 0.88),
+        ("doc_python", 0.82),
+    ];
 
     // Sparse vector search (e.g., SPLADE)
-    let sparse = vec![("doc_rust", 0.91), ("doc_python", 0.85), ("doc_java", 0.72)];
+    let sparse = vec![
+        ("doc_rust", 0.91),
+        ("doc_python", 0.85),
+        ("doc_java", 0.72),
+    ];
 
     let lists = vec![&bm25[..], &dense[..], &sparse[..]];
 
@@ -45,3 +57,4 @@ fn main() {
     // Note: doc_rust appears in all 3 lists and tops all fusion methods
     println!("\nObservation: 'doc_rust' appears in all 3 lists and wins in all methods.");
 }
+
