@@ -39,7 +39,7 @@ Fusion algorithms for hybrid search:
 | Trust one retriever more | `weighted`, `rrf_weighted` |
 | Different distributions | `dbsf` (z-score) |
 
-**What this is NOT**: embedding generation, reranking, vector search. See [rank-refine](https://crates.io/crates/rank-refine) for scoring embeddings.
+**What this is NOT**: embedding generation, vector search, or scoring embeddings. See [rank-refine](https://crates.io/crates/rank-refine) for scoring embeddings.
 
 ## Usage
 
@@ -201,8 +201,8 @@ Start here: Do your retrievers use compatible score scales?
 
 ```
 ├─ No (BM25: 0-100, dense: 0-1) → Use rank-based
-│  ├─ Want top positions to dominate? → RRF (k=60)
-│  └─ Want gentler decay? → ISR (k=1)
+│  ├─ Need strong consensus? → RRF (k=60)
+│  └─ Lower ranks still valuable? → ISR (k=1)
 │
 └─ Yes (both 0-1, both cosine similarity) → Use score-based
    ├─ Want to reward overlap? → CombMNZ
@@ -213,7 +213,7 @@ Start here: Do your retrievers use compatible score scales?
 
 **When RRF underperforms**:
 
-RRF is about 3-4% lower NDCG than CombSUM when score scales are compatible (OpenSearch BEIR benchmarks). Trade-off:
+RRF is typically 3-4% lower NDCG than CombSUM when score scales are compatible (OpenSearch BEIR benchmarks). Trade-off:
 - RRF: Robust to scale mismatches, no tuning needed
 - CombSUM: Better quality when scales match, requires normalization
 
