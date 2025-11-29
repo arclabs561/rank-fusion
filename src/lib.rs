@@ -383,10 +383,17 @@ impl FusionMethod {
 ///
 /// Formula: `score(d) = Σ 1/(k + rank)` where rank is 0-indexed.
 ///
-/// RRF is robust to score distribution differences between retrievers.
-/// The original scores are ignored; only rank position matters.
+/// **Why RRF?** Different retrievers use incompatible score scales (BM25: 0-100,
+/// dense: 0-1). RRF solves this by ignoring scores entirely and using only rank
+/// positions. The reciprocal formula ensures:
+/// - Top positions dominate (rank 0 gets 1/60 = 0.017, rank 5 gets 1/65 = 0.015)
+/// - Multiple list agreement is rewarded (documents appearing in both lists score higher)
+/// - No normalization needed (works with any score distribution)
 ///
-/// Use [`rrf_with_config`] to customize the k parameter.
+/// **When to use**: Hybrid search with incompatible score scales, zero-configuration needs.
+/// **When NOT to use**: When score scales are compatible, CombSUM achieves ~3-4% better NDCG.
+///
+/// Use [`rrf_with_config`] to customize the k parameter (lower k = more top-heavy).
 ///
 /// # Complexity
 ///
@@ -401,7 +408,7 @@ impl FusionMethod {
 /// let dense = vec![("d2", 0.8), ("d3", 0.3)];
 ///
 /// let fused = rrf(&sparse, &dense);
-/// assert_eq!(fused[0].0, "d2"); // appears in both lists
+/// assert_eq!(fused[0].0, "d2"); // appears in both lists (consensus)
 /// ```
 #[must_use]
 pub fn rrf<I: Clone + Eq + Hash>(results_a: &[(I, f32)], results_b: &[(I, f32)]) -> Vec<(I, f32)> {
@@ -411,8 +418,11 @@ pub fn rrf<I: Clone + Eq + Hash>(results_a: &[(I, f32)], results_b: &[(I, f32)])
 /// RRF with custom configuration.
 ///
 /// Use this when you need to tune the k parameter:
-/// - Lower k (e.g., 20): Top positions dominate more
-/// - Higher k (e.g., 100): More uniform contribution across positions
+/// - **k=20-40**: Top positions dominate more. Use when top retrievers are highly reliable.
+/// - **k=60**: Default (empirically chosen by Cormack et al., 2009). Balanced for most scenarios.
+/// - **k=100+**: More uniform contribution. Use when lower-ranked items are still valuable.
+///
+/// **Sensitivity**: k=10 gives 1.5x ratio (rank 0 vs rank 5), k=60 gives 1.1x, k=100 gives 1.05x.
 ///
 /// # Example
 ///
@@ -422,7 +432,7 @@ pub fn rrf<I: Clone + Eq + Hash>(results_a: &[(I, f32)], results_b: &[(I, f32)])
 /// let a = vec![("d1", 0.9), ("d2", 0.5)];
 /// let b = vec![("d2", 0.8), ("d3", 0.3)];
 ///
-/// // k=20: emphasize top positions
+/// // k=20: emphasize top positions (strong consensus required)
 /// let fused = rrf_with_config(&a, &b, RrfConfig::new(20));
 /// ```
 #[must_use]
