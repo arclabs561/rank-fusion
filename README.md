@@ -1,6 +1,6 @@
 # rank-fusion
 
-Combine ranked lists from multiple retrievers. Zero dependencies.
+Combine ranked lists from multiple retrievers. Provides RRF (Reciprocal Rank Fusion), CombMNZ, Borda, DBSF, and weighted fusion. Zero dependencies.
 
 [![CI](https://github.com/arclabs561/rank-fusion/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/rank-fusion/actions)
 [![Crates.io](https://img.shields.io/crates/v/rank-fusion.svg)](https://crates.io/crates/rank-fusion)
@@ -12,20 +12,20 @@ cargo add rank-fusion
 
 ## Why Rank Fusion?
 
-Hybrid search combines multiple retrievers (BM25, dense embeddings, sparse vectors) to get the best of each. But how do you merge their results?
+Hybrid search combines multiple retrievers (BM25, dense embeddings, sparse vectors) to get the best of each. This requires merging their results.
 
-**The Problem**: Different retrievers use incompatible score scales. BM25 might score 0-100, while dense embeddings score 0-1. Simple normalization is fragile and requires tuning.
+**Problem**: Different retrievers use incompatible score scales. BM25 might score 0-100, while dense embeddings score 0-1. Normalization is fragile and requires tuning.
 
-**RRF Solution**: Ignore scores entirely and use only rank positions. The reciprocal formula `1/(k + rank)` ensures:
+**RRF (Reciprocal Rank Fusion)**: Ignores scores and uses only rank positions. The formula `1/(k + rank)` ensures:
 - Top positions dominate (rank 0 gets 1/60 = 0.017, rank 5 gets 1/65 = 0.015)
 - Multiple list agreement is rewarded (documents appearing in both lists score higher)
 - No normalization needed (works with any score distribution)
 
 **Example**: Document "d2" appears at rank 0 in BM25 list and rank 1 in dense list:
-- RRF score = 1/(60+0) + 1/(60+1) = 0.0167 + 0.0164 = **0.0331**
+- RRF score = 1/(60+0) + 1/(60+1) = 0.0167 + 0.0164 = 0.0331
 - This beats "d1" (only in BM25 at rank 0: 0.0167) and "d3" (only in dense at rank 1: 0.0164)
 
-RRF finds consensus across retrievers, making hybrid search robust and zero-configuration.
+RRF finds consensus across retrievers. No normalization needed, works with any score distribution.
 
 ## What This Is
 
@@ -122,32 +122,33 @@ let fused = rrf_weighted(&lists, &weights, config)?;
 
 ## Formulas
 
-**RRF** (Cormack 2009):
+**RRF (Reciprocal Rank Fusion)**: Ignores score magnitudes and uses only rank positions. Formula:
+
 $$\text{RRF}(d) = \sum_r \frac{1}{k + \text{rank}_r(d)}$$
 
-Default k=60. Rank is 0-indexed.
+Default k=60. Rank is 0-indexed. From Cormack et al. (2009).
 
 ### Why k=60?
 
-The k parameter controls how sharply top positions dominate. Empirical studies (Cormack et al., 2009) found k=60 balances:
+The k parameter controls how sharply top positions dominate. Cormack et al. (2009) tested k values from 1 to 100 and found k=60 balances:
 - Top position emphasis (rank 0 vs rank 5: 1.1x ratio)
 - Consensus across lists (lower k overweights single-list agreement)
 - Robustness across datasets
 
-**Sensitivity Analysis**:
+**Sensitivity analysis**:
 
 | k | rank 0 | rank 5 | rank 10 | Ratio (0 vs 5) | Use Case |
 |---|--------|--------|---------|----------------|----------|
 | 10 | 0.100 | 0.067 | 0.050 | 1.5x | Top positions highly reliable |
-| 60 | 0.017 | 0.015 | 0.014 | 1.1x | **Default for most scenarios** |
+| 60 | 0.017 | 0.015 | 0.014 | 1.1x | Default for most scenarios |
 | 100 | 0.010 | 0.0095 | 0.0091 | 1.05x | Want uniform contribution |
 
-**When to Tune**:
+**When to tune**:
 - k=20-40: When top retrievers are highly reliable, want strong consensus
 - k=60: Default for most hybrid search scenarios
 - k=100+: When lower-ranked items are still valuable, want broad agreement
 
-**Visual Example**:
+**Visual example**:
 
 ```
 BM25 list:        Dense list:
@@ -157,23 +158,23 @@ rank 2: d3 (10.5)  rank 2: d1 (0.7)
 
 RRF scores (k=60):
 d1: 1/(60+0) + 1/(60+2) = 0.0167 + 0.0161 = 0.0328
-d2: 1/(60+1) + 1/(60+0) = 0.0164 + 0.0167 = 0.0331  ← wins!
+d2: 1/(60+1) + 1/(60+0) = 0.0164 + 0.0167 = 0.0331 (wins)
 d3: 1/(60+2) + 1/(60+1) = 0.0161 + 0.0164 = 0.0325
 
 Final ranking: [d2, d1, d3]
 ```
 
-**CombMNZ**:
+**CombMNZ**: Multiplies sum by count of lists containing the document:
 $$\text{score}(d) = \text{count}(d) \times \sum_r s_r(d)$$
 
-**DBSF** (z-score normalization):
+**DBSF (Distribution-Based Score Fusion)**: Z-score normalization:
 $$s' = \frac{s - \mu}{\sigma}, \quad \text{clipped to } [-3, 3]$$
 
-Clipping to ±3σ bounds outliers (>99.7% of normal distribution is within 3σ).
+Clipping to ±3σ bounds outliers. About 99.7% of normal distribution is within 3σ.
 
 ## Benchmarks
 
-Apple M3 Max, `cargo bench`:
+Measured on Apple M3 Max with `cargo bench`:
 
 | Operation | Items | Time |
 |-----------|-------|------|
@@ -184,9 +185,11 @@ Apple M3 Max, `cargo bench`:
 | `borda` | 100 | 13μs |
 | `rrf_multi` (5 lists) | 100 | 38μs |
 
+These timings are suitable for real-time fusion of 100-1000 item lists.
+
 ## Vendoring
 
-If you prefer not to add a dependency:
+The code can be vendored if you prefer not to add a dependency:
 
 - `src/lib.rs` is self-contained (~2000 lines)
 - Zero dependencies
@@ -194,7 +197,7 @@ If you prefer not to add a dependency:
 
 ## Choosing a Fusion Method
 
-**Start here**: Do your retrievers use compatible score scales?
+Start here: Do your retrievers use compatible score scales?
 
 ```
 ├─ No (BM25: 0-100, dense: 0-1) → Use rank-based
@@ -208,21 +211,21 @@ If you prefer not to add a dependency:
    └─ Trust one retriever more? → Weighted
 ```
 
-**When RRF Underperforms**:
+**When RRF underperforms**:
 
-RRF is ~3-4% lower NDCG than CombSUM when score scales are compatible (OpenSearch BEIR benchmarks). Trade-off:
-- **RRF**: Robust to scale mismatches, no tuning needed, zero-configuration
-- **CombSUM**: Better quality when scales match, requires normalization
+RRF is about 3-4% lower NDCG than CombSUM when score scales are compatible (OpenSearch BEIR benchmarks). Trade-off:
+- RRF: Robust to scale mismatches, no tuning needed
+- CombSUM: Better quality when scales match, requires normalization
 
 **Use RRF when**:
-- ✅ Score scales are unknown or incompatible
-- ✅ You want zero-configuration fusion
-- ✅ Robustness > optimal quality
+- Score scales are unknown or incompatible
+- You want zero-configuration fusion
+- Robustness is more important than optimal quality
 
 **Use CombSUM when**:
-- ✅ Scores are on the same scale (both cosine, both BM25, etc.)
-- ✅ You can normalize reliably
-- ✅ Quality > convenience
+- Scores are on the same scale (both cosine, both BM25, etc.)
+- You can normalize reliably
+- Quality is more important than convenience
 
 See [DESIGN.md](DESIGN.md) for algorithm details.
 
