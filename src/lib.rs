@@ -1148,8 +1148,8 @@ mod tests {
     #[test]
     fn rrf_weighted_applies_weights() {
         // d1 appears in list_a (rank 0), d2 appears in list_b (rank 0)
-        let list_a = vec![("d1", 0.0)];
-        let list_b = vec![("d2", 0.0)];
+        let list_a = [("d1", 0.0)];
+        let list_b = [("d2", 0.0)];
 
         // Weight list_b 3x more than list_a
         let weights = [0.25, 0.75];
@@ -1171,8 +1171,8 @@ mod tests {
 
     #[test]
     fn rrf_weighted_zero_weights_error() {
-        let list_a = vec![("d1", 0.0)];
-        let list_b = vec![("d2", 0.0)];
+        let list_a = [("d1", 0.0)];
+        let list_b = [("d2", 0.0)];
         let weights = [0.0, 0.0];
 
         let result = rrf_weighted(&[&list_a[..], &list_b[..]], &weights, RrfConfig::default());
