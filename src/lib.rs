@@ -34,6 +34,9 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+#[cfg(feature = "pyo3")]
+pub mod python;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Error Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1395,6 +1398,7 @@ pub struct FusedResult<K> {
 
 /// Explanation of how a fused score was computed.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Explanation {
     /// Contributions from each retriever that contained this document.
     pub sources: Vec<SourceContribution>,
@@ -1410,6 +1414,7 @@ pub struct Explanation {
 
 /// Contribution from a single retriever to a document's final score.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SourceContribution {
     /// Identifier for this retriever (e.g., "bm25", "dense_vector").
     pub retriever_id: String,
@@ -1609,6 +1614,7 @@ where
 /// // consensus.single_source contains documents only in one retriever
 /// ```
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ConsensusReport<K> {
     /// Documents that appeared in all retrievers (consensus_score == 1.0).
     pub high_consensus: Vec<K>,
@@ -1671,6 +1677,7 @@ pub fn analyze_consensus<K: Clone + Eq + Hash>(results: &[FusedResult<K>]) -> Co
 ///
 /// Shows how much each retriever contributed to the top-k results.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RetrieverStats {
     /// Number of top-k documents this retriever contributed.
     pub top_k_count: usize,
