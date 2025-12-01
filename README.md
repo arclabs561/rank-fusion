@@ -181,11 +181,24 @@ See [`examples/explainability.rs`](examples/explainability.rs) for a complete ex
 
 ## Formulas
 
+### Notation
+
+- $d$: Document identifier
+- $R$: Set of all retrievers
+- $r$: A single retriever (element of $R$)
+- $R_d$: Set of retrievers containing document $d$
+- $\text{rank}_r(d)$: 0-indexed rank of document $d$ in retriever $r$ (top result = 0)
+- $s_r(d)$: Score of document $d$ from retriever $r$
+- $N$: Total number of documents in a list
+- $k$: Smoothing constant (default 60 for RRF)
+
+### RRF (Reciprocal Rank Fusion)
+
 **RRF (Reciprocal Rank Fusion)**: Ignores score magnitudes and uses only rank positions. Formula:
 
-$$\text{RRF}(d) = \sum_r \frac{1}{k + \text{rank}_r(d)}$$
+$$\text{RRF}(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}$$
 
-Default k=60. Rank is 0-indexed. From Cormack et al. (2009).
+where $R$ is the set of retrievers, $k$ is a smoothing constant (default 60), and $\text{rank}_r(d)$ is the 0-indexed rank of document $d$ in retriever $r$ (top result = 0). From Cormack et al. (2009).
 
 ### Why k=60?
 
@@ -223,13 +236,58 @@ d3: 1/(60+2) + 1/(60+1) = 0.0161 + 0.0164 = 0.0325
 Final ranking: [d2, d1, d3]
 ```
 
-**CombMNZ**: Multiplies sum by count of lists containing the document:
+**CombMNZ**: Rewards documents appearing in multiple lists (consensus). Multiplies the sum of scores by the number of lists containing the document:
+
 $$\text{score}(d) = \text{count}(d) \times \sum_r s_r(d)$$
 
-**DBSF (Distribution-Based Score Fusion)**: Z-score normalization:
-$$s' = \frac{s - \mu}{\sigma}, \quad \text{clipped to } [-3, 3]$$
+**Example**: Document "d1" appears in 2 lists with scores [0.8, 0.7], while "d2" appears in 1 list with score 0.9:
+- CombSUM: d1 = 0.8 + 0.7 = 1.5, d2 = 0.9 (d1 wins)
+- CombMNZ: d1 = 2 × 1.5 = 3.0, d2 = 1 × 0.9 = 0.9 (d1 wins by larger margin)
 
-Clipping to ±3σ bounds outliers. About 99.7% of normal distribution is within 3σ.
+**Borda Count**: Each position gets points equal to how many documents it beats. Formula:
+
+$$\text{Borda}(d) = \sum_{r \in R} (N - \text{rank}_r(d))$$
+
+where $N$ is the total number of documents in list $r$, and $\text{rank}_r(d)$ is 0-indexed.
+
+**Example**: Two lists, each with 3 documents:
+```
+List 1: [d1, d2, d3]  (N=3)
+List 2: [d2, d1, d3]  (N=3)
+```
+
+Borda scores:
+- d1: (3-0) + (3-1) = 3 + 2 = 5
+- d2: (3-1) + (3-0) = 2 + 3 = 5 (tie)
+- d3: (3-2) + (3-2) = 1 + 1 = 2
+
+Both d1 and d2 win, reflecting that they appear high in both lists.
+
+**DBSF (Distribution-Based Score Fusion)**: Normalizes scores using z-scores to handle different distributions:
+
+$$s' = \text{clip}\left(\frac{s - \mu}{\sigma}, -3, 3\right)$$
+
+where $\mu$ and $\sigma$ are the mean and standard deviation of scores from that retriever. Clipping to $[-3, 3]$ bounds outliers: 99.7% of values in a normal distribution fall within ±3σ. This prevents one extreme score from dominating.
+
+**Example**: Retriever A has scores [10, 12, 15, 18, 20] (mean=15, σ=4). Document with score 25 gets z-score (25-15)/4 = 2.5. Document with score 30 gets clipped to 3.0 (would be 3.75 without clipping).
+
+### Relationship Between Algorithms
+
+**CombMNZ vs CombSUM**: CombMNZ is CombSUM multiplied by consensus count:
+
+$$\text{CombMNZ}(d) = \text{count}(d) \times \text{CombSUM}(d)$$
+
+**ISR vs RRF**: ISR uses square root instead of linear reciprocal:
+
+$$\text{ISR}(d) = \sum_{r \in R} \frac{1}{\sqrt{k + \text{rank}_r(d)}}$$
+
+This gives lower-ranked items more weight. Use ISR when you want to consider items beyond the top 10-20.
+
+**DBSF vs CombSUM**: DBSF is CombSUM with z-score normalization instead of min-max:
+
+$$\text{DBSF}(d) = |R_d| \cdot \sum_{r \in R_d} \text{clip}\left(\frac{s_r(d) - \mu_r}{\sigma_r}, -3, 3\right)$$
+
+Use DBSF when score distributions differ significantly between retrievers.
 
 ## Benchmarks
 

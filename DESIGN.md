@@ -36,11 +36,12 @@ Rank fusion has roots in **social choice theory** (voting systems):
 
 ### Reciprocal Rank Fusion (RRF)
 
-```math
-\text{RRF}(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}
-```
+$$\text{RRF}(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}$$
 
-where $k$ is a smoothing constant (default 60) and $\text{rank}_r(d)$ is **0-indexed** (top result = 0).
+where:
+- $R$ is the set of all retrievers
+- $k$ is a smoothing constant (default 60)
+- $\text{rank}_r(d)$ is the 0-indexed rank of document $d$ in retriever $r$ (top result = 0)
 
 **Properties:**
 - Ignores score magnitudes — only position matters
@@ -68,45 +69,47 @@ Lower k → top ranks dominate. Higher k → flatter, rewards consensus across l
 
 ### CombSUM / CombMNZ
 
-```math
-\text{CombSUM}(d) = \sum_{r \in R} \text{norm}(s_r(d))
-```
+$$\text{CombSUM}(d) = \sum_{r \in R} \text{norm}(s_r(d))$$
 
-```math
-\text{CombMNZ}(d) = |R_d| \cdot \sum_{r \in R_d} \text{norm}(s_r(d))
-```
+$$\text{CombMNZ}(d) = |R_d| \cdot \sum_{r \in R_d} \text{norm}(s_r(d))$$
 
-where $R_d$ is the set of lists containing $d$, and $\text{norm}$ is min-max normalization.
+where:
+- $R$ is the set of all retrievers
+- $R_d$ is the set of retrievers containing document $d$
+- $s_r(d)$ is the score of document $d$ from retriever $r$
+- $\text{norm}$ is min-max normalization (scales scores to [0, 1])
 
 **When to use:** Scores are comparable (same scale, same meaning).
 
 ### Borda Count
 
-```math
-\text{Borda}(d) = \sum_{r \in R} (N - \text{rank}_r(d))
-```
+$$\text{Borda}(d) = \sum_{r \in R} (N - \text{rank}_r(d))$$
 
-where $\text{rank}_r(d)$ is **0-indexed** (top result = 0).
+where:
+- $N$ is the total number of documents in list $r$
+- $\text{rank}_r(d)$ is the 0-indexed rank of document $d$ in retriever $r$ (top result = 0)
 
-**Origin:** Jean-Charles de Borda, 1770. Used in elections.
+**Origin:** Jean-Charles de Borda, 1770. Used in elections. Each position gets points equal to how many documents it beats.
 
 ### DBSF (Distribution-Based Score Fusion)
 
-```math
-\text{DBSF}(d) = |R_d| \cdot \sum_{r \in R_d} \text{clip}\left(\frac{s_r(d) - \mu_r}{\sigma_r}, -3, 3\right)
-```
+$$\text{DBSF}(d) = |R_d| \cdot \sum_{r \in R_d} \text{clip}\left(\frac{s_r(d) - \mu_r}{\sigma_r}, -3, 3\right)$$
 
-Z-score normalization: subtract mean, divide by standard deviation. This puts different score distributions on comparable scales.
+where:
+- $R_d$ is the set of retrievers containing document $d$
+- $s_r(d)$ is the score of document $d$ from retriever $r$
+- $\mu_r$ and $\sigma_r$ are the mean and standard deviation of scores from retriever $r$
+- $\text{clip}(x, -3, 3)$ bounds $x$ to the range $[-3, 3]$
 
-Clipping to [-3, 3] bounds outliers. For a normal distribution, 99.7% of values are within ±3σ. Without clipping, a single extreme score could dominate the fusion.
+Z-score normalization puts different score distributions on comparable scales. Clipping to $[-3, 3]$ bounds outliers: in a normal distribution, 99.7% of values fall within ±3σ. This prevents a single extreme score from dominating the fusion.
 
 ## Optimal Solution
 
 The theoretically optimal ranking is the **Kemeny optimal** — the ranking that minimizes total Kendall tau distance to all input rankings:
 
-```math
-K^* = \arg\min_{K} \sum_{r \in R} \tau(K, r)
-```
+$$K^* = \arg\min_{K} \sum_{r \in R} \tau(K, r)$$
+
+where $\tau(K, r)$ is the Kendall tau distance between ranking $K$ and input ranking $r$.
 
 This is NP-hard to compute (shown to be NP-complete by Dwork et al., 2001). RRF is a practical approximation that achieves good results in O(n log n) time.
 
