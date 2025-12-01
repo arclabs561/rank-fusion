@@ -1976,6 +1976,8 @@ fn build_explained_results<I: Clone + Eq + Hash>(
 /// ```rust
 /// use rank_fusion::FusionStrategy;
 ///
+/// let list1 = vec![("d1", 1.0), ("d2", 0.5)];
+/// let list2 = vec![("d2", 0.9), ("d3", 0.8)];
 /// let strategy = FusionStrategy::rrf(60);
 /// let result = strategy.fuse(&[&list1[..], &list2[..]]);
 /// ```
