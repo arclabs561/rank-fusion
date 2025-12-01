@@ -1,6 +1,6 @@
 # rank-fusion
 
-Combine ranked lists from multiple retrievers. Provides RRF (Reciprocal Rank Fusion), CombMNZ, Borda, DBSF, and weighted fusion. Zero dependencies.
+Combine ranked lists from multiple retrievers. Provides RRF, CombMNZ, Borda, DBSF, RBC, Condorcet, and 10+ fusion algorithms with full explainability, hyperparameter optimization, and IR metrics. Zero dependencies.
 
 [![CI](https://github.com/arclabs561/rank-fusion/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/rank-fusion/actions)
 [![Crates.io](https://img.shields.io/crates/v/rank-fusion.svg)](https://crates.io/crates/rank-fusion)
@@ -34,10 +34,13 @@ Fusion algorithms for hybrid search:
 | Scenario | Algorithm |
 |----------|-----------|
 | BM25 + dense embeddings | `rrf` (rank-based) |
+| Variable-length lists | `rbc` (Rank-Biased Centroids) |
 | Multiple retrievers, different scales | `rrf_multi` |
 | Same-scale scores | `combsum`, `combmnz` |
 | Trust one retriever more | `weighted`, `rrf_weighted` |
 | Different distributions | `dbsf` (z-score) |
+| Robust to outliers | `condorcet`, `combmed` |
+| Baselines | `combmax`, `combanz` |
 
 **What this is NOT**: embedding generation, vector search, or scoring embeddings. See [rank-refine](https://crates.io/crates/rank-refine) for scoring embeddings.
 
@@ -90,6 +93,8 @@ let fused = rrf(&bm25_results, &dense_results);
 | `rrf(a, b)` | 1/(k + rank) | Different scales |
 | `isr(a, b)` | 1/√(k + rank) | Lower ranks matter more |
 | `borda(a, b)` | N - rank | Simple voting |
+| `rbc(a, b)` | (1-p)^rank / (1-p^N) | Variable-length lists |
+| `condorcet(a, b)` | Pairwise voting | Robust to outliers |
 
 ### Score-based
 
@@ -99,6 +104,9 @@ let fused = rrf(&bm25_results, &dense_results);
 | `combmnz(a, b)` | sum × count | Reward overlap |
 | `dbsf(a, b)` | z-score | Different distributions |
 | `weighted(a, b, config)` | weighted sum | Custom weights |
+| `combmax(a, b)` | max(scores) | Baseline, favor high scores |
+| `combmed(a, b)` | median(scores) | Robust to outliers |
+| `combanz(a, b)` | mean(scores) | Average instead of sum |
 
 ### Multi-list
 
@@ -119,6 +127,57 @@ use rank_fusion::rrf_weighted;
 let weights = [1.0, 2.0, 0.5];  // per-retriever
 let fused = rrf_weighted(&lists, &weights, config)?;
 ```
+
+### Explainability
+
+Debug and analyze fusion results with full provenance:
+
+```rust
+use rank_fusion::explain::{rrf_explain, analyze_consensus, attribute_top_k, RetrieverId};
+use rank_fusion::RrfConfig;
+
+let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+let dense = vec![("d2", 0.9), ("d3", 0.8)];
+
+let retrievers = vec![
+    RetrieverId::new("bm25"),
+    RetrieverId::new("dense"),
+];
+
+// Get results with full provenance
+let explained = rrf_explain(
+    &[&bm25[..], &dense[..]],
+    &retrievers,
+    RrfConfig::default(),
+);
+
+// Each result shows which retrievers contributed and how
+for result in &explained {
+    println!("{}: score={:.6}, consensus={:.1}%",
+        result.id, result.score,
+        result.explanation.consensus_score * 100.0);
+    for source in &result.explanation.sources {
+        println!("  {}: rank {}, contribution {:.6}",
+            source.retriever_id,
+            source.original_rank.unwrap_or(999),
+            source.contribution);
+    }
+}
+
+// Analyze consensus patterns
+let consensus = analyze_consensus(&explained);
+println!("High consensus: {:?}", consensus.high_consensus);
+println!("Single source: {:?}", consensus.single_source);
+
+// Attribute top-k to retrievers
+let attribution = attribute_top_k(&explained, 5);
+for (retriever, stats) in &attribution {
+    println!("{}: {} docs in top-5, {} unique",
+        retriever, stats.top_k_count, stats.unique_docs);
+}
+```
+
+See [`examples/explainability.rs`](examples/explainability.rs) for a complete example.
 
 ## Formulas
 
@@ -228,6 +287,116 @@ RRF is typically 3-4% lower NDCG than CombSUM when score scales are compatible (
 - Quality is more important than convenience
 
 See [DESIGN.md](DESIGN.md) for algorithm details.
+
+## Explainability
+
+The `explain` module provides variants of fusion functions that return full provenance information, showing:
+
+- **Which retrievers** contributed each document
+- **Original ranks and scores** from each retriever
+- **Contribution amounts** showing how much each source added to the final score
+- **Consensus scores** indicating how many retrievers agreed on each document
+
+This is critical for debugging RAG pipelines: you can see if your expensive cross-encoder is actually helping, identify retriever disagreement patterns, and understand why certain documents ranked where they did.
+
+**Use cases:**
+- Debugging retrieval failures ("Why did this relevant doc rank so low?")
+- A/B testing retrievers ("Is my new embedding model actually improving results?")
+- Building user trust ("This answer came 60% from our docs, 40% from community forum")
+- Identifying index staleness or embedding drift
+
+See [`examples/explainability.rs`](examples/explainability.rs) for a complete example.
+
+## Normalization
+
+Score normalization is now a first-class concern. Use `normalize_scores()` to explicitly control how scores are normalized before fusion:
+
+```rust
+use rank_fusion::{normalize_scores, Normalization};
+
+let scores = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
+
+// Min-max normalization (default for CombSUM/CombMNZ)
+let normalized = normalize_scores(&scores, Normalization::MinMax);
+
+// Z-score normalization (used by DBSF)
+let z_normalized = normalize_scores(&scores, Normalization::ZScore);
+
+// Sum normalization (preserves relative magnitudes)
+let sum_normalized = normalize_scores(&scores, Normalization::Sum);
+
+// Rank-based (ignores score magnitudes)
+let rank_normalized = normalize_scores(&scores, Normalization::Rank);
+```
+
+## Runtime Strategy Selection
+
+Use the `FusionStrategy` enum for dynamic method selection:
+
+```rust
+use rank_fusion::strategy::FusionStrategy;
+
+// Select method at runtime
+let method = if use_scores {
+    FusionStrategy::combsum()
+} else {
+    FusionStrategy::rrf(60)
+};
+
+let result = method.fuse(&[&list1[..], &list2[..]]);
+println!("Using method: {}", method.name());
+```
+
+## Hyperparameter Optimization
+
+Optimize fusion parameters using ground truth (qrels):
+
+```rust
+use rank_fusion::optimize::{optimize_fusion, OptimizeConfig, OptimizeMetric, ParamGrid};
+use rank_fusion::FusionMethod;
+
+// Relevance judgments
+let qrels = std::collections::HashMap::from([
+    ("doc1", 2), // highly relevant
+    ("doc2", 1), // relevant
+]);
+
+// Retrieval runs
+let runs = vec![
+    vec![("doc1", 0.9), ("doc2", 0.8)],
+    vec![("doc2", 0.9), ("doc1", 0.7)],
+];
+
+// Optimize RRF k parameter
+let config = OptimizeConfig {
+    method: FusionMethod::Rrf { k: 60 },
+    metric: OptimizeMetric::Ndcg { k: 10 },
+    param_grid: ParamGrid::RrfK {
+        values: vec![20, 40, 60, 100],
+    },
+};
+
+let optimized = optimize_fusion(&qrels, &runs, config);
+println!("Best k: {}, NDCG@10: {:.4}", optimized.best_params, optimized.best_score);
+```
+
+## Evaluation Metrics
+
+The crate includes standard IR metrics for evaluation:
+
+```rust
+use rank_fusion::{ndcg_at_k, mrr, recall_at_k};
+
+let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
+let qrels = std::collections::HashMap::from([
+    ("d1", 2), // highly relevant
+    ("d2", 1), // relevant
+]);
+
+let ndcg = ndcg_at_k(&results, &qrels, 10);
+let reciprocal_rank = mrr(&results, &qrels);
+let recall = recall_at_k(&results, &qrels, 10);
+```
 
 ## See Also
 

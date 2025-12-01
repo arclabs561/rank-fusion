@@ -252,9 +252,31 @@ impl FusionConfig {
 /// ```
 pub mod prelude {
     pub use crate::{
-        borda, combmnz, combsum, dbsf, isr, isr_with_config, rrf, rrf_with_config, weighted,
+        borda, combanz, combmax, combmed, combmnz, combsum, dbsf, isr, isr_with_config, rrf,
+        rrf_with_config, weighted,
     };
-    pub use crate::{FusionConfig, FusionError, FusionMethod, Result, RrfConfig, WeightedConfig};
+    pub use crate::{
+        FusionConfig, FusionError, FusionMethod, Normalization, Result, RrfConfig, WeightedConfig,
+    };
+}
+
+/// Explainability module for debugging and analysis.
+///
+/// Provides variants of fusion functions that return full provenance information,
+/// showing which retrievers contributed each document and how scores were computed.
+pub mod explain {
+    pub use crate::{
+        analyze_consensus, attribute_top_k, combmnz_explain, combsum_explain, dbsf_explain,
+        rrf_explain, ConsensusReport, Explanation, FusedResult, RetrieverId, RetrieverStats,
+        SourceContribution,
+    };
+}
+
+/// Strategy module for runtime fusion method selection.
+///
+/// Enables dynamic selection of fusion methods without trait objects.
+pub mod strategy {
+    pub use crate::FusionStrategy;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1218,6 +1240,88 @@ fn sort_scored_desc<I>(results: &mut [(I, f32)]) {
     results.sort_by(|a, b| b.1.total_cmp(&a.1));
 }
 
+/// Score normalization methods.
+///
+/// Different retrievers produce scores on different scales. Normalization
+/// puts them on a common scale before combining.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Normalization {
+    /// Min-max normalization: `(score - min) / (max - min)` → [0, 1]
+    ///
+    /// Best when score distributions are similar. Sensitive to outliers.
+    #[default]
+    MinMax,
+    /// Z-score normalization: `(score - mean) / std`, clipped to [-3, 3]
+    ///
+    /// More robust to outliers. Better when distributions differ.
+    ZScore,
+    /// Sum normalization: `score / sum(scores)`
+    ///
+    /// Preserves relative magnitudes. Useful when scores represent probabilities.
+    Sum,
+    /// Rank-based: convert scores to ranks, then normalize
+    ///
+    /// Ignores score magnitudes entirely. Most robust but loses information.
+    Rank,
+    /// No normalization: use raw scores
+    ///
+    /// Only use when all retrievers use the same scale.
+    None,
+}
+
+/// Normalize a list of scores using the specified method.
+///
+/// Returns a vector of (id, normalized_score) pairs.
+pub fn normalize_scores<I: Clone>(results: &[(I, f32)], method: Normalization) -> Vec<(I, f32)> {
+    if results.is_empty() {
+        return Vec::new();
+    }
+
+    match method {
+        Normalization::MinMax => {
+            let (norm, off) = min_max_params(results);
+            results
+                .iter()
+                .map(|(id, s)| (id.clone(), (s - off) * norm))
+                .collect()
+        }
+        Normalization::ZScore => {
+            let (mean, std) = zscore_params(results);
+            results
+                .iter()
+                .map(|(id, s)| {
+                    let z = if std > SCORE_RANGE_EPSILON {
+                        ((s - mean) / std).clamp(-3.0, 3.0)
+                    } else {
+                        0.0
+                    };
+                    (id.clone(), z)
+                })
+                .collect()
+        }
+        Normalization::Sum => {
+            let sum: f32 = results.iter().map(|(_, s)| s).sum();
+            if sum.abs() < SCORE_RANGE_EPSILON {
+                return results.to_vec();
+            }
+            results
+                .iter()
+                .map(|(id, s)| (id.clone(), s / sum))
+                .collect()
+        }
+        Normalization::Rank => {
+            // Convert to ranks (0-indexed), then normalize by list length
+            let n = results.len() as f32;
+            results
+                .iter()
+                .enumerate()
+                .map(|(rank, (id, _))| (id.clone(), 1.0 - (rank as f32 / n)))
+                .collect()
+        }
+        Normalization::None => results.to_vec(),
+    }
+}
+
 /// Returns `(norm_factor, offset)` for min-max normalization.
 ///
 /// Normalized score = `(score - offset) * norm_factor`
@@ -1241,6 +1345,1251 @@ fn min_max_params<I>(results: &[(I, f32)]) -> (f32, f32) {
     } else {
         (1.0 / range, min)
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Explainability
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A fused result with full provenance information for debugging and analysis.
+///
+/// Unlike the simple `Vec<(DocId, f32)>` returned by standard fusion functions,
+/// `FusedResult` preserves which retrievers contributed each document, their
+/// original ranks and scores, and how much each source contributed to the final score.
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::explain::{rrf_explain, RetrieverId};
+///
+/// let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+/// let dense = vec![("d2", 0.9), ("d3", 0.8)];
+///
+/// let retrievers = vec![
+///     RetrieverId::new("bm25"),
+///     RetrieverId::new("dense"),
+/// ];
+///
+/// let explained = rrf_explain(
+///     &[&bm25[..], &dense[..]],
+///     &retrievers,
+///     rank_fusion::RrfConfig::default(),
+/// );
+///
+/// // d2 appears in both lists, so it has 2 source contributions
+/// let d2 = explained.iter().find(|r| r.id == "d2").unwrap();
+/// assert_eq!(d2.explanation.sources.len(), 2);
+/// assert_eq!(d2.explanation.consensus_score, 1.0); // 2/2 lists
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct FusedResult<K> {
+    /// Document identifier.
+    pub id: K,
+    /// Final fused score.
+    pub score: f32,
+    /// Final rank position (0-indexed, highest score = rank 0).
+    pub rank: usize,
+    /// Explanation of how this score was computed.
+    pub explanation: Explanation,
+}
+
+/// Explanation of how a fused score was computed.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Explanation {
+    /// Contributions from each retriever that contained this document.
+    pub sources: Vec<SourceContribution>,
+    /// Fusion method used (e.g., "rrf", "combsum").
+    pub method: &'static str,
+    /// Consensus score: fraction of retrievers that contained this document (0.0-1.0).
+    ///
+    /// - 1.0 = document appeared in all retrievers (strong consensus)
+    /// - 0.5 = document appeared in half of retrievers
+    /// - < 0.3 = document appeared in few retrievers (outlier)
+    pub consensus_score: f32,
+}
+
+/// Contribution from a single retriever to a document's final score.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourceContribution {
+    /// Identifier for this retriever (e.g., "bm25", "dense_vector").
+    pub retriever_id: String,
+    /// Original rank in this retriever's list (0-indexed, None if not present).
+    pub original_rank: Option<usize>,
+    /// Original score from this retriever (None for rank-based methods or if not present).
+    pub original_score: Option<f32>,
+    /// Normalized score (for score-based methods, None for rank-based).
+    pub normalized_score: Option<f32>,
+    /// How much this source contributed to the final fused score.
+    ///
+    /// For RRF: `1/(k + rank)` or `weight / (k + rank)` for weighted.
+    /// For CombSUM: normalized score.
+    /// For CombMNZ: normalized score × overlap count.
+    pub contribution: f32,
+}
+
+/// Retriever identifier for explainability.
+///
+/// Used to label which retriever each list comes from when calling explain variants.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RetrieverId {
+    id: String,
+}
+
+impl RetrieverId {
+    /// Create a new retriever identifier.
+    pub fn new<S: Into<String>>(id: S) -> Self {
+        Self { id: id.into() }
+    }
+
+    /// Get the identifier string.
+    pub fn as_str(&self) -> &str {
+        &self.id
+    }
+}
+
+impl From<&str> for RetrieverId {
+    fn from(id: &str) -> Self {
+        Self::new(id)
+    }
+}
+
+impl From<String> for RetrieverId {
+    fn from(id: String) -> Self {
+        Self::new(id)
+    }
+}
+
+/// RRF with explainability: returns full provenance for each result.
+///
+/// This variant preserves which retrievers contributed each document, their
+/// original ranks, and how much each source contributed to the final RRF score.
+///
+/// # Arguments
+///
+/// * `lists` - Ranked lists from each retriever
+/// * `retriever_ids` - Identifiers for each retriever (must match `lists.len()`)
+/// * `config` - RRF configuration
+///
+/// # Returns
+///
+/// Results sorted by fused score (descending), with full explanation metadata.
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::explain::{rrf_explain, RetrieverId};
+/// use rank_fusion::RrfConfig;
+///
+/// let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+/// let dense = vec![("d2", 0.9), ("d3", 0.8)];
+///
+/// let retrievers = vec![
+///     RetrieverId::new("bm25"),
+///     RetrieverId::new("dense"),
+/// ];
+///
+/// let explained = rrf_explain(
+///     &[&bm25[..], &dense[..]],
+///     &retrievers,
+///     RrfConfig::default(),
+/// );
+///
+/// // d2 appears in both lists at rank 1 and 0 respectively
+/// let d2 = explained.iter().find(|r| r.id == "d2").unwrap();
+/// assert_eq!(d2.explanation.sources.len(), 2);
+/// assert_eq!(d2.explanation.consensus_score, 1.0); // in both lists
+///
+/// // Check contributions
+/// let bm25_contrib = d2.explanation.sources.iter()
+///     .find(|s| s.retriever_id == "bm25")
+///     .unwrap();
+/// assert_eq!(bm25_contrib.original_rank, Some(1));
+/// assert!(bm25_contrib.contribution > 0.0);
+/// ```
+#[must_use]
+#[allow(clippy::cast_precision_loss)]
+pub fn rrf_explain<I, L>(
+    lists: &[L],
+    retriever_ids: &[RetrieverId],
+    config: RrfConfig,
+) -> Vec<FusedResult<I>>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() || lists.len() != retriever_ids.len() {
+        return Vec::new();
+    }
+
+    let k = config.k as f32;
+    let num_retrievers = lists.len() as f32;
+
+    // Track scores and provenance
+    let mut scores: HashMap<I, f32> = HashMap::new();
+    let mut provenance: HashMap<I, Vec<SourceContribution>> = HashMap::new();
+
+    for (list, retriever_id) in lists.iter().zip(retriever_ids.iter()) {
+        for (rank, (id, original_score)) in list.as_ref().iter().enumerate() {
+            let contribution = 1.0 / (k + rank as f32);
+
+            // Update score
+            *scores.entry(id.clone()).or_insert(0.0) += contribution;
+
+            // Track provenance
+            provenance
+                .entry(id.clone())
+                .or_default()
+                .push(SourceContribution {
+                    retriever_id: retriever_id.id.clone(),
+                    original_rank: Some(rank),
+                    original_score: Some(*original_score),
+                    normalized_score: None, // RRF doesn't normalize
+                    contribution,
+                });
+        }
+    }
+
+    // Build results with explanations
+    let mut results: Vec<FusedResult<I>> = scores
+        .into_iter()
+        .map(|(id, score)| {
+            let sources = provenance.remove(&id).unwrap_or_default();
+            let consensus_score = sources.len() as f32 / num_retrievers;
+
+            FusedResult {
+                id,
+                score,
+                rank: 0, // Will be set after sorting
+                explanation: Explanation {
+                    sources,
+                    method: "rrf",
+                    consensus_score,
+                },
+            }
+        })
+        .collect();
+
+    // Sort by score descending
+    results.sort_by(|a, b| b.score.total_cmp(&a.score));
+
+    // Set ranks
+    for (rank, result) in results.iter_mut().enumerate() {
+        result.rank = rank;
+    }
+
+    // Apply top_k
+    if let Some(top_k) = config.top_k {
+        results.truncate(top_k);
+    }
+
+    results
+}
+
+/// Analyze consensus patterns across retrievers.
+///
+/// Returns statistics about how retrievers agree or disagree on document relevance.
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::explain::{rrf_explain, analyze_consensus, RetrieverId};
+/// use rank_fusion::RrfConfig;
+///
+/// let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+/// let dense = vec![("d2", 0.9), ("d3", 0.8)];
+///
+/// let explained = rrf_explain(
+///     &[&bm25[..], &dense[..]],
+///     &[RetrieverId::new("bm25"), RetrieverId::new("dense")],
+///     RrfConfig::default(),
+/// );
+///
+/// let consensus = analyze_consensus(&explained);
+/// // consensus.high_consensus contains documents in all retrievers
+/// // consensus.single_source contains documents only in one retriever
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConsensusReport<K> {
+    /// Documents that appeared in all retrievers (consensus_score == 1.0).
+    pub high_consensus: Vec<K>,
+    /// Documents that appeared in only one retriever (consensus_score < 0.5).
+    pub single_source: Vec<K>,
+    /// Documents with large rank disagreements across retrievers.
+    ///
+    /// A document might appear at rank 0 in one retriever but rank 50 in another,
+    /// indicating retriever disagreement.
+    pub rank_disagreement: Vec<(K, Vec<(String, usize)>)>,
+}
+
+pub fn analyze_consensus<K: Clone + Eq + Hash>(results: &[FusedResult<K>]) -> ConsensusReport<K> {
+    let mut high_consensus = Vec::new();
+    let mut single_source = Vec::new();
+    let mut rank_disagreement = Vec::new();
+
+    for result in results {
+        // High consensus: in all retrievers
+        if result.explanation.consensus_score >= 1.0 - 1e-6 {
+            high_consensus.push(result.id.clone());
+        }
+
+        // Single source: in only one retriever
+        if result.explanation.sources.len() == 1 {
+            single_source.push(result.id.clone());
+        }
+
+        // Rank disagreement: large spread in ranks
+        if result.explanation.sources.len() > 1 {
+            let ranks: Vec<usize> = result
+                .explanation
+                .sources
+                .iter()
+                .filter_map(|s| s.original_rank)
+                .collect();
+            if let (Some(&min_rank), Some(&max_rank)) = (ranks.iter().min(), ranks.iter().max()) {
+                if max_rank - min_rank > 10 {
+                    // Large disagreement threshold
+                    let rank_info: Vec<(String, usize)> = result
+                        .explanation
+                        .sources
+                        .iter()
+                        .filter_map(|s| s.original_rank.map(|r| (s.retriever_id.clone(), r)))
+                        .collect();
+                    rank_disagreement.push((result.id.clone(), rank_info));
+                }
+            }
+        }
+    }
+
+    ConsensusReport {
+        high_consensus,
+        single_source,
+        rank_disagreement,
+    }
+}
+
+/// Attribution statistics for each retriever.
+///
+/// Shows how much each retriever contributed to the top-k results.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RetrieverStats {
+    /// Number of top-k documents this retriever contributed.
+    pub top_k_count: usize,
+    /// Average contribution strength for documents in top-k.
+    pub avg_contribution: f32,
+    /// Documents that only this retriever found (unique to this retriever).
+    pub unique_docs: usize,
+}
+
+/// Attribute top-k results to retrievers.
+///
+/// Returns statistics showing which retrievers contributed most to the top-k results.
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::explain::{rrf_explain, attribute_top_k, RetrieverId};
+/// use rank_fusion::RrfConfig;
+///
+/// let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+/// let dense = vec![("d2", 0.9), ("d3", 0.8)];
+///
+/// let explained = rrf_explain(
+///     &[&bm25[..], &dense[..]],
+///     &[RetrieverId::new("bm25"), RetrieverId::new("dense")],
+///     RrfConfig::default(),
+/// );
+///
+/// let attribution = attribute_top_k(&explained, 5);
+/// // attribution["bm25"].top_k_count shows how many top-5 docs came from BM25
+/// ```
+pub fn attribute_top_k<K: Clone + Eq + Hash>(
+    results: &[FusedResult<K>],
+    k: usize,
+) -> std::collections::HashMap<String, RetrieverStats> {
+    let top_k = results.iter().take(k);
+    let mut stats: std::collections::HashMap<String, RetrieverStats> =
+        std::collections::HashMap::new();
+
+    // Track which documents each retriever found
+    let mut retriever_docs: std::collections::HashMap<String, std::collections::HashSet<K>> =
+        std::collections::HashMap::new();
+
+    for result in top_k {
+        for source in &result.explanation.sources {
+            let entry =
+                stats
+                    .entry(source.retriever_id.clone())
+                    .or_insert_with(|| RetrieverStats {
+                        top_k_count: 0,
+                        avg_contribution: 0.0,
+                        unique_docs: 0,
+                    });
+
+            entry.top_k_count += 1;
+            entry.avg_contribution += source.contribution;
+
+            retriever_docs
+                .entry(source.retriever_id.clone())
+                .or_default()
+                .insert(result.id.clone());
+        }
+    }
+
+    // Calculate averages and unique counts
+    for (retriever_id, stat) in &mut stats {
+        if stat.top_k_count > 0 {
+            stat.avg_contribution /= stat.top_k_count as f32;
+        }
+
+        // Count unique documents (only in this retriever)
+        let this_retriever_docs = retriever_docs
+            .get(retriever_id)
+            .cloned()
+            .unwrap_or_default();
+        let other_retriever_docs: std::collections::HashSet<K> = retriever_docs
+            .iter()
+            .filter(|(id, _)| *id != retriever_id)
+            .flat_map(|(_, docs)| docs.iter().cloned())
+            .collect();
+
+        stat.unique_docs = this_retriever_docs
+            .difference(&other_retriever_docs)
+            .count();
+    }
+
+    stats
+}
+
+/// CombSUM with explainability.
+#[must_use]
+pub fn combsum_explain<I, L>(
+    lists: &[L],
+    retriever_ids: &[RetrieverId],
+    config: FusionConfig,
+) -> Vec<FusedResult<I>>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() || lists.len() != retriever_ids.len() {
+        return Vec::new();
+    }
+
+    let num_retrievers = lists.len() as f32;
+    let mut scores: HashMap<I, f32> = HashMap::new();
+    let mut provenance: HashMap<I, Vec<SourceContribution>> = HashMap::new();
+
+    for (list, retriever_id) in lists.iter().zip(retriever_ids.iter()) {
+        let items = list.as_ref();
+        let (norm, off) = min_max_params(items);
+        for (rank, (id, original_score)) in items.iter().enumerate() {
+            let normalized_score = (original_score - off) * norm;
+            let contribution = normalized_score;
+
+            *scores.entry(id.clone()).or_insert(0.0) += contribution;
+
+            provenance
+                .entry(id.clone())
+                .or_default()
+                .push(SourceContribution {
+                    retriever_id: retriever_id.id.clone(),
+                    original_rank: Some(rank),
+                    original_score: Some(*original_score),
+                    normalized_score: Some(normalized_score),
+                    contribution,
+                });
+        }
+    }
+
+    build_explained_results(scores, provenance, num_retrievers, "combsum", config.top_k)
+}
+
+/// CombMNZ with explainability.
+#[must_use]
+#[allow(clippy::cast_precision_loss)]
+pub fn combmnz_explain<I, L>(
+    lists: &[L],
+    retriever_ids: &[RetrieverId],
+    config: FusionConfig,
+) -> Vec<FusedResult<I>>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() || lists.len() != retriever_ids.len() {
+        return Vec::new();
+    }
+
+    let num_retrievers = lists.len() as f32;
+    let mut scores: HashMap<I, (f32, u32)> = HashMap::new();
+    let mut provenance: HashMap<I, Vec<SourceContribution>> = HashMap::new();
+
+    for (list, retriever_id) in lists.iter().zip(retriever_ids.iter()) {
+        let items = list.as_ref();
+        let (norm, off) = min_max_params(items);
+        for (rank, (id, original_score)) in items.iter().enumerate() {
+            let normalized_score = (original_score - off) * norm;
+            let contribution = normalized_score;
+
+            let entry = scores.entry(id.clone()).or_insert((0.0, 0));
+            entry.0 += contribution;
+            entry.1 += 1;
+
+            provenance
+                .entry(id.clone())
+                .or_default()
+                .push(SourceContribution {
+                    retriever_id: retriever_id.id.clone(),
+                    original_rank: Some(rank),
+                    original_score: Some(*original_score),
+                    normalized_score: Some(normalized_score),
+                    contribution,
+                });
+        }
+    }
+
+    // Apply CombMNZ multiplier (overlap count)
+    let mut final_scores: HashMap<I, f32> = HashMap::new();
+    let mut final_provenance: HashMap<I, Vec<SourceContribution>> = HashMap::new();
+
+    for (id, (sum, overlap_count)) in scores {
+        let final_score = sum * overlap_count as f32;
+        final_scores.insert(id.clone(), final_score);
+
+        // Update contributions to reflect multiplier
+        if let Some(mut sources) = provenance.remove(&id) {
+            for source in &mut sources {
+                source.contribution *= overlap_count as f32;
+            }
+            final_provenance.insert(id, sources);
+        }
+    }
+
+    build_explained_results(
+        final_scores,
+        final_provenance,
+        num_retrievers,
+        "combmnz",
+        config.top_k,
+    )
+}
+
+/// DBSF with explainability.
+#[must_use]
+pub fn dbsf_explain<I, L>(
+    lists: &[L],
+    retriever_ids: &[RetrieverId],
+    config: FusionConfig,
+) -> Vec<FusedResult<I>>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() || lists.len() != retriever_ids.len() {
+        return Vec::new();
+    }
+
+    let num_retrievers = lists.len() as f32;
+    let mut scores: HashMap<I, f32> = HashMap::new();
+    let mut provenance: HashMap<I, Vec<SourceContribution>> = HashMap::new();
+
+    for (list, retriever_id) in lists.iter().zip(retriever_ids.iter()) {
+        let items = list.as_ref();
+        let (mean, std) = zscore_params(items);
+
+        for (rank, (id, original_score)) in items.iter().enumerate() {
+            let z = if std > SCORE_RANGE_EPSILON {
+                ((original_score - mean) / std).clamp(-3.0, 3.0)
+            } else {
+                0.0
+            };
+            let contribution = z;
+
+            *scores.entry(id.clone()).or_insert(0.0) += contribution;
+
+            provenance
+                .entry(id.clone())
+                .or_default()
+                .push(SourceContribution {
+                    retriever_id: retriever_id.id.clone(),
+                    original_rank: Some(rank),
+                    original_score: Some(*original_score),
+                    normalized_score: Some(z),
+                    contribution,
+                });
+        }
+    }
+
+    build_explained_results(scores, provenance, num_retrievers, "dbsf", config.top_k)
+}
+
+/// Helper to build explained results from scores and provenance.
+fn build_explained_results<I: Clone + Eq + Hash>(
+    scores: HashMap<I, f32>,
+    mut provenance: HashMap<I, Vec<SourceContribution>>,
+    num_retrievers: f32,
+    method: &'static str,
+    top_k: Option<usize>,
+) -> Vec<FusedResult<I>> {
+    let mut results: Vec<FusedResult<I>> = scores
+        .into_iter()
+        .map(|(id, score)| {
+            let sources = provenance.remove(&id).unwrap_or_default();
+            let consensus_score = sources.len() as f32 / num_retrievers;
+
+            FusedResult {
+                id,
+                score,
+                rank: 0, // Will be set after sorting
+                explanation: Explanation {
+                    sources,
+                    method,
+                    consensus_score,
+                },
+            }
+        })
+        .collect();
+
+    results.sort_by(|a, b| b.score.total_cmp(&a.score));
+
+    for (rank, result) in results.iter_mut().enumerate() {
+        result.rank = rank;
+    }
+
+    if let Some(k) = top_k {
+        results.truncate(k);
+    }
+
+    results
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Trait-Based Abstraction
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Fusion strategy enum for runtime dispatch.
+///
+/// This enables dynamic selection of fusion methods without trait objects.
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::FusionStrategy;
+///
+/// let strategy = FusionStrategy::rrf(60);
+/// let result = strategy.fuse(&[&list1[..], &list2[..]]);
+/// ```
+#[derive(Debug, Clone)]
+pub enum FusionStrategy {
+    /// RRF with custom k.
+    Rrf { k: u32 },
+    /// CombSUM.
+    CombSum,
+    /// CombMNZ.
+    CombMnz,
+    /// Weighted fusion with custom weights.
+    Weighted { weights: Vec<f32>, normalize: bool },
+}
+
+impl FusionStrategy {
+    /// Fuse multiple ranked lists.
+    ///
+    /// # Arguments
+    /// * `runs` - Slice of ranked lists, each as (ID, score) pairs
+    ///
+    /// # Returns
+    /// Combined list sorted by fused score (descending)
+    pub fn fuse<I: Clone + Eq + Hash>(&self, runs: &[&[(I, f32)]]) -> Vec<(I, f32)> {
+        match self {
+            Self::Rrf { k } => rrf_multi(runs, RrfConfig::new(*k)),
+            Self::CombSum => combsum_multi(runs, FusionConfig::default()),
+            Self::CombMnz => combmnz_multi(runs, FusionConfig::default()),
+            Self::Weighted { weights, normalize } => {
+                if runs.len() != weights.len() {
+                    return Vec::new();
+                }
+                let lists: Vec<_> = runs
+                    .iter()
+                    .zip(weights.iter())
+                    .map(|(run, &w)| (*run, w))
+                    .collect();
+                weighted_multi(&lists, *normalize, None).unwrap_or_default()
+            }
+        }
+    }
+
+    /// Human-readable name of this fusion method.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Rrf { .. } => "rrf",
+            Self::CombSum => "combsum",
+            Self::CombMnz => "combmnz",
+            Self::Weighted { .. } => "weighted",
+        }
+    }
+
+    /// Whether this method uses score values (true) or only ranks (false).
+    pub fn uses_scores(&self) -> bool {
+        match self {
+            Self::Rrf { .. } => false,
+            Self::CombSum | Self::CombMnz | Self::Weighted { .. } => true,
+        }
+    }
+}
+
+// Convenience constructors for FusionStrategy
+impl FusionStrategy {
+    /// Create RRF strategy with custom k.
+    #[must_use]
+    pub fn rrf(k: u32) -> Self {
+        assert!(k >= 1, "k must be >= 1");
+        Self::Rrf { k }
+    }
+
+    /// Create RRF strategy with default k=60.
+    #[must_use]
+    pub fn rrf_default() -> Self {
+        Self::Rrf { k: 60 }
+    }
+
+    /// Create CombSUM strategy.
+    #[must_use]
+    pub fn combsum() -> Self {
+        Self::CombSum
+    }
+
+    /// Create CombMNZ strategy.
+    #[must_use]
+    pub fn combmnz() -> Self {
+        Self::CombMnz
+    }
+
+    /// Create weighted strategy with custom weights.
+    #[must_use]
+    pub fn weighted(weights: Vec<f32>, normalize: bool) -> Self {
+        Self::Weighted { weights, normalize }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Additional Algorithms
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// CombMAX: maximum score across all lists.
+///
+/// Formula: `score(d) = max(s_r(d))` for all retrievers r containing d.
+///
+/// Use as a baseline or when you want to favor documents that score highly
+/// in at least one retriever.
+#[must_use]
+pub fn combmax<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+) -> Vec<(I, f32)> {
+    combmax_multi(&[results_a, results_b], FusionConfig::default())
+}
+
+/// CombMAX for 3+ result lists.
+#[must_use]
+pub fn combmax_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() {
+        return Vec::new();
+    }
+    let mut scores: HashMap<I, f32> = HashMap::new();
+
+    for list in lists {
+        for (id, s) in list.as_ref() {
+            scores
+                .entry(id.clone())
+                .and_modify(|max_score| *max_score = max_score.max(*s))
+                .or_insert(*s);
+        }
+    }
+
+    finalize(scores, config.top_k)
+}
+
+/// CombMED: median score across all lists.
+///
+/// Formula: `score(d) = median(s_r(d))` for all retrievers r containing d.
+///
+/// More robust to outliers than CombMAX or CombSUM.
+#[must_use]
+pub fn combmed<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+) -> Vec<(I, f32)> {
+    combmed_multi(&[results_a, results_b], FusionConfig::default())
+}
+
+/// CombMED for 3+ result lists.
+#[must_use]
+pub fn combmed_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() {
+        return Vec::new();
+    }
+    let mut score_lists: HashMap<I, Vec<f32>> = HashMap::new();
+
+    for list in lists {
+        for (id, s) in list.as_ref() {
+            score_lists.entry(id.clone()).or_default().push(*s);
+        }
+    }
+
+    let mut scores: HashMap<I, f32> = HashMap::new();
+    for (id, mut score_vec) in score_lists {
+        score_vec.sort_by(|a, b| a.total_cmp(b));
+        let median = if score_vec.len() % 2 == 0 {
+            let mid = score_vec.len() / 2;
+            (score_vec[mid - 1] + score_vec[mid]) / 2.0
+        } else {
+            score_vec[score_vec.len() / 2]
+        };
+        scores.insert(id, median);
+    }
+
+    finalize(scores, config.top_k)
+}
+
+/// CombANZ: average of non-zero scores.
+///
+/// Formula: `score(d) = mean(s_r(d))` for all retrievers r containing d.
+///
+/// Similar to CombSUM but divides by count (average instead of sum).
+#[must_use]
+pub fn combanz<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+) -> Vec<(I, f32)> {
+    combanz_multi(&[results_a, results_b], FusionConfig::default())
+}
+
+/// CombANZ for 3+ result lists.
+#[must_use]
+#[allow(clippy::cast_precision_loss)]
+pub fn combanz_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() {
+        return Vec::new();
+    }
+    let mut scores: HashMap<I, (f32, usize)> = HashMap::new();
+
+    for list in lists {
+        for (id, s) in list.as_ref() {
+            let entry = scores.entry(id.clone()).or_insert((0.0, 0));
+            entry.0 += s;
+            entry.1 += 1;
+        }
+    }
+
+    let mut results: Vec<_> = scores
+        .into_iter()
+        .map(|(id, (sum, count))| (id, sum / count as f32))
+        .collect();
+    sort_scored_desc(&mut results);
+    if let Some(top_k) = config.top_k {
+        results.truncate(top_k);
+    }
+    results
+}
+
+/// Rank-Biased Centroids (RBC) fusion.
+///
+/// Handles variable-length lists gracefully by using a geometric discount
+/// that depends on list length. More robust than RRF when lists have very
+/// different lengths.
+///
+/// Formula: `score(d) = Σ (1 - p)^rank / (1 - p^N)` where:
+/// - `p` is the persistence parameter (default 0.8, higher = more top-heavy)
+/// - `N` is the list length
+/// - `rank` is 0-indexed
+///
+/// From Bailey et al. (2017). Better than RRF when lists have different lengths.
+#[must_use]
+pub fn rbc<I: Clone + Eq + Hash>(results_a: &[(I, f32)], results_b: &[(I, f32)]) -> Vec<(I, f32)> {
+    rbc_multi(&[results_a, results_b], 0.8)
+}
+
+/// RBC for 3+ result lists with custom persistence.
+///
+/// # Arguments
+/// * `lists` - Ranked lists to fuse
+/// * `persistence` - Persistence parameter (0.0-1.0), default 0.8. Higher = more top-heavy.
+#[must_use]
+#[allow(clippy::cast_precision_loss)]
+pub fn rbc_multi<I, L>(lists: &[L], persistence: f32) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() {
+        return Vec::new();
+    }
+
+    let p = persistence.clamp(0.0, 1.0);
+    let mut scores: HashMap<I, f32> = HashMap::new();
+
+    for list in lists {
+        let items = list.as_ref();
+        let n = items.len() as f32;
+        let denominator = 1.0 - p.powi(n as i32);
+
+        for (rank, (id, _)) in items.iter().enumerate() {
+            let numerator = (1.0 - p).powi(rank as i32);
+            let contribution = if denominator > 1e-9 {
+                numerator / denominator
+            } else {
+                0.0
+            };
+
+            *scores.entry(id.clone()).or_insert(0.0) += contribution;
+        }
+    }
+
+    finalize(scores, None)
+}
+
+/// Condorcet fusion (pairwise comparison voting).
+///
+/// For each pair of documents, counts how many retrievers prefer one over the other.
+/// Documents that beat all others in pairwise comparisons win.
+///
+/// This is a simplified Condorcet method. Full Condorcet (Kemeny optimal) is NP-hard.
+///
+/// # Algorithm
+///
+/// 1. For each document pair (d1, d2), count retrievers where d1 ranks higher than d2
+/// 2. Document d1 "beats" d2 if majority of retrievers prefer d1
+/// 3. Score = number of documents that this document beats
+///
+/// More robust to outliers than score-based methods.
+#[must_use]
+pub fn condorcet<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+) -> Vec<(I, f32)> {
+    condorcet_multi(&[results_a, results_b], FusionConfig::default())
+}
+
+/// Condorcet for 3+ result lists.
+#[must_use]
+pub fn condorcet_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() {
+        return Vec::new();
+    }
+
+    // Build rank maps: doc_id -> rank in each list
+    let mut doc_ranks: HashMap<I, Vec<Option<usize>>> = HashMap::new();
+    let mut all_docs: std::collections::HashSet<I> = std::collections::HashSet::new();
+
+    for list in lists {
+        let items = list.as_ref();
+        for doc_id in items.iter().map(|(id, _)| id) {
+            all_docs.insert(doc_id.clone());
+        }
+    }
+
+    // Initialize all docs with None ranks
+    for doc_id in &all_docs {
+        doc_ranks.insert(doc_id.clone(), vec![None; lists.len()]);
+    }
+
+    // Fill in actual ranks
+    for (list_idx, list) in lists.iter().enumerate() {
+        for (rank, (id, _)) in list.as_ref().iter().enumerate() {
+            if let Some(ranks) = doc_ranks.get_mut(id) {
+                ranks[list_idx] = Some(rank);
+            }
+        }
+    }
+
+    // For each document, count how many others it beats
+    let mut scores: HashMap<I, f32> = HashMap::new();
+    let doc_vec: Vec<I> = all_docs.into_iter().collect();
+
+    for (i, d1) in doc_vec.iter().enumerate() {
+        let mut wins = 0;
+
+        for (j, d2) in doc_vec.iter().enumerate() {
+            if i == j {
+                continue;
+            }
+
+            // Count lists where d1 ranks better than d2
+            let d1_ranks = &doc_ranks[d1];
+            let d2_ranks = &doc_ranks[d2];
+
+            let mut d1_wins = 0;
+            for (r1, r2) in d1_ranks.iter().zip(d2_ranks.iter()) {
+                match (r1, r2) {
+                    (Some(rank1), Some(rank2)) if rank1 < rank2 => d1_wins += 1,
+                    (Some(_), None) => d1_wins += 1, // d1 present, d2 not
+                    _ => {}
+                }
+            }
+
+            // Majority wins
+            if d1_wins > lists.len() / 2 {
+                wins += 1;
+            }
+        }
+
+        scores.insert(d1.clone(), wins as f32);
+    }
+
+    finalize(scores, config.top_k)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Optimization and Metrics
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Relevance judgments (qrels) for a query.
+///
+/// Maps document IDs to relevance scores (typically 0=not relevant, 1=relevant, 2=highly relevant).
+pub type Qrels<K> = std::collections::HashMap<K, u32>;
+
+/// Normalized Discounted Cumulative Gain at k.
+///
+/// Measures ranking quality by rewarding relevant documents that appear early.
+/// NDCG@k ranges from 0.0 (worst) to 1.0 (perfect).
+///
+/// # Formula
+///
+/// NDCG@k = DCG@k / IDCG@k
+///
+/// where:
+/// - DCG@k = Σ (2^rel_i - 1) / log2(i + 1) for i in [0, k)
+/// - IDCG@k = DCG@k of the ideal ranking (sorted by relevance descending)
+pub fn ndcg_at_k<K: Clone + Eq + Hash>(results: &[(K, f32)], qrels: &Qrels<K>, k: usize) -> f32 {
+    if qrels.is_empty() || results.is_empty() {
+        return 0.0;
+    }
+
+    let k = k.min(results.len());
+    let mut dcg = 0.0;
+
+    for (i, (id, _)) in results.iter().take(k).enumerate() {
+        if let Some(&rel) = qrels.get(id) {
+            let gain = (2.0_f32.powi(rel as i32) - 1.0) / ((i + 2) as f32).log2();
+            dcg += gain;
+        }
+    }
+
+    // Compute IDCG (ideal DCG)
+    let mut ideal_relevances: Vec<u32> = qrels.values().copied().collect();
+    ideal_relevances.sort_by(|a, b| b.cmp(a)); // Descending
+
+    let mut idcg = 0.0;
+    for (i, &rel) in ideal_relevances.iter().take(k).enumerate() {
+        let gain = (2.0_f32.powi(rel as i32) - 1.0) / ((i + 2) as f32).log2();
+        idcg += gain;
+    }
+
+    if idcg > 1e-9 {
+        dcg / idcg
+    } else {
+        0.0
+    }
+}
+
+/// Mean Reciprocal Rank.
+///
+/// Measures the rank of the first relevant document. MRR ranges from 0.0 to 1.0.
+///
+/// Formula: MRR = 1 / rank_of_first_relevant
+pub fn mrr<K: Clone + Eq + Hash>(results: &[(K, f32)], qrels: &Qrels<K>) -> f32 {
+    for (rank, (id, _)) in results.iter().enumerate() {
+        if qrels.contains_key(id) && qrels[id] > 0 {
+            return 1.0 / (rank + 1) as f32;
+        }
+    }
+    0.0
+}
+
+/// Recall at k.
+///
+/// Fraction of relevant documents that appear in the top-k results.
+///
+/// Formula: Recall@k = |relevant_docs_in_top_k| / |total_relevant_docs|
+pub fn recall_at_k<K: Clone + Eq + Hash>(results: &[(K, f32)], qrels: &Qrels<K>, k: usize) -> f32 {
+    let total_relevant = qrels.values().filter(|&&rel| rel > 0).count();
+    if total_relevant == 0 {
+        return 0.0;
+    }
+
+    let k = k.min(results.len());
+    let relevant_in_top_k = results
+        .iter()
+        .take(k)
+        .filter(|(id, _)| qrels.get(id).is_some_and(|&rel| rel > 0))
+        .count();
+
+    relevant_in_top_k as f32 / total_relevant as f32
+}
+
+/// Optimization configuration for hyperparameter search.
+#[derive(Debug, Clone)]
+pub struct OptimizeConfig {
+    /// Fusion method to optimize.
+    pub method: FusionMethod,
+    /// Metric to optimize (NDCG, MRR, or Recall).
+    pub metric: OptimizeMetric,
+    /// Parameter grid to search.
+    pub param_grid: ParamGrid,
+}
+
+/// Metric to optimize during hyperparameter search.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptimizeMetric {
+    /// NDCG@k (default k=10).
+    Ndcg { k: usize },
+    /// Mean Reciprocal Rank.
+    Mrr,
+    /// Recall@k (default k=10).
+    Recall { k: usize },
+}
+
+impl Default for OptimizeMetric {
+    fn default() -> Self {
+        Self::Ndcg { k: 10 }
+    }
+}
+
+/// Parameter grid for optimization.
+#[derive(Debug, Clone)]
+pub enum ParamGrid {
+    /// Grid search over RRF k values.
+    RrfK { values: Vec<u32> },
+    /// Grid search over weighted fusion weights.
+    Weighted { weight_combinations: Vec<Vec<f32>> },
+}
+
+/// Optimized parameters from hyperparameter search.
+#[derive(Debug, Clone)]
+pub struct OptimizedParams {
+    /// Best metric value found.
+    pub best_score: f32,
+    /// Parameters that achieved best score.
+    pub best_params: String,
+}
+
+/// Optimize fusion hyperparameters using grid search.
+///
+/// Given relevance judgments (qrels) and multiple retrieval runs, searches
+/// over parameter space to find the best configuration.
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::optimize::{optimize_fusion, OptimizeConfig, OptimizeMetric, ParamGrid};
+/// use rank_fusion::FusionMethod;
+///
+/// let qrels = std::collections::HashMap::from([
+///     ("doc1", 2), // highly relevant
+///     ("doc2", 1), // relevant
+/// ]);
+///
+/// let runs = vec![
+///     vec![("doc1", 0.9), ("doc2", 0.8)],
+///     vec![("doc2", 0.9), ("doc1", 0.7)],
+/// ];
+///
+/// let config = OptimizeConfig {
+///     method: FusionMethod::Rrf { k: 60 }, // will be overridden
+///     metric: OptimizeMetric::Ndcg { k: 10 },
+///     param_grid: ParamGrid::RrfK {
+///         values: vec![20, 40, 60, 100],
+///     },
+/// };
+///
+/// let optimized = optimize_fusion(&qrels, &runs, config);
+/// println!("Best k: {}, score: {:.4}", optimized.best_params, optimized.best_score);
+/// ```
+pub fn optimize_fusion<K: Clone + Eq + Hash>(
+    qrels: &Qrels<K>,
+    runs: &[Vec<(K, f32)>],
+    config: OptimizeConfig,
+) -> OptimizedParams {
+    let mut best_score = f32::NEG_INFINITY;
+    let mut best_params = String::new();
+
+    match config.param_grid {
+        ParamGrid::RrfK { values } => {
+            for k in values {
+                let method = FusionMethod::Rrf { k };
+                let fused = method.fuse_multi(runs);
+
+                let score = match config.metric {
+                    OptimizeMetric::Ndcg { k: ndcg_k } => ndcg_at_k(&fused, qrels, ndcg_k),
+                    OptimizeMetric::Mrr => mrr(&fused, qrels),
+                    OptimizeMetric::Recall { k: recall_k } => recall_at_k(&fused, qrels, recall_k),
+                };
+
+                if score > best_score {
+                    best_score = score;
+                    best_params = format!("k={}", k);
+                }
+            }
+        }
+        ParamGrid::Weighted {
+            ref weight_combinations,
+        } => {
+            for weights in weight_combinations {
+                if weights.len() != runs.len() {
+                    continue;
+                }
+                let lists: Vec<(&[(K, f32)], f32)> = runs
+                    .iter()
+                    .zip(weights.iter())
+                    .map(|(run, &w)| (run.as_slice(), w))
+                    .collect();
+
+                if let Ok(fused) = weighted_multi(&lists, true, None) {
+                    let score = match config.metric {
+                        OptimizeMetric::Ndcg { k: ndcg_k } => ndcg_at_k(&fused, qrels, ndcg_k),
+                        OptimizeMetric::Mrr => mrr(&fused, qrels),
+                        OptimizeMetric::Recall { k: recall_k } => {
+                            recall_at_k(&fused, qrels, recall_k)
+                        }
+                    };
+
+                    if score > best_score {
+                        best_score = score;
+                        best_params = format!("weights={:?}", weights);
+                    }
+                }
+            }
+        }
+    }
+
+    OptimizedParams {
+        best_score,
+        best_params,
+    }
+}
+
+/// Optimization module exports.
+pub mod optimize {
+    pub use crate::{
+        mrr, ndcg_at_k, optimize_fusion, recall_at_k, OptimizeConfig, OptimizeMetric,
+        OptimizedParams, ParamGrid, Qrels,
+    };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2442,5 +3791,459 @@ mod proptests {
                 prop_assert!(rrf_result.iter().any(|(rid, _)| rid == id), "Missing ID {:?}", id);
             }
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Explainability Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod explain_tests {
+    use super::*;
+
+    #[test]
+    fn rrf_explain_basic() {
+        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+        let dense = vec![("d2", 0.9), ("d3", 0.8)];
+
+        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
+
+        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::default());
+
+        // d2 should be top (appears in both lists)
+        assert_eq!(explained[0].id, "d2");
+        assert_eq!(explained[0].explanation.sources.len(), 2);
+        assert!((explained[0].explanation.consensus_score - 1.0).abs() < 1e-6);
+
+        // d1 and d3 should each have 1 source
+        let d1 = explained.iter().find(|r| r.id == "d1").unwrap();
+        assert_eq!(d1.explanation.sources.len(), 1);
+        assert!((d1.explanation.consensus_score - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn rrf_explain_provenance() {
+        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+        let dense = vec![("d2", 0.9), ("d3", 0.8)];
+
+        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
+
+        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::new(60));
+
+        let d2 = explained.iter().find(|r| r.id == "d2").unwrap();
+
+        // Check BM25 contribution
+        let bm25_contrib = d2
+            .explanation
+            .sources
+            .iter()
+            .find(|s| s.retriever_id == "bm25")
+            .unwrap();
+        assert_eq!(bm25_contrib.original_rank, Some(1));
+        assert_eq!(bm25_contrib.original_score, Some(11.0));
+        let expected_contrib = 1.0 / (60.0 + 1.0);
+        assert!((bm25_contrib.contribution - expected_contrib).abs() < 1e-6);
+
+        // Check dense contribution
+        let dense_contrib = d2
+            .explanation
+            .sources
+            .iter()
+            .find(|s| s.retriever_id == "dense")
+            .unwrap();
+        assert_eq!(dense_contrib.original_rank, Some(0));
+        assert_eq!(dense_contrib.original_score, Some(0.9));
+        let expected_contrib = 1.0 / 60.0;
+        assert!((dense_contrib.contribution - expected_contrib).abs() < 1e-6);
+    }
+
+    #[test]
+    fn rrf_explain_ranks() {
+        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+        let dense = vec![("d2", 0.9), ("d3", 0.8)];
+
+        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
+
+        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::default());
+
+        // Ranks should be 0-indexed and sequential
+        for (rank, result) in explained.iter().enumerate() {
+            assert_eq!(result.rank, rank);
+        }
+    }
+
+    #[test]
+    fn analyze_consensus_basic() {
+        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+        let dense = vec![("d2", 0.9), ("d3", 0.8)];
+
+        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
+
+        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::default());
+
+        let consensus = analyze_consensus(&explained);
+
+        // d2 appears in both lists (high consensus)
+        assert!(consensus.high_consensus.contains(&"d2"));
+
+        // d1 and d3 appear in only one list (single source)
+        assert!(consensus.single_source.contains(&"d1"));
+        assert!(consensus.single_source.contains(&"d3"));
+    }
+
+    #[test]
+    fn attribute_top_k_basic() {
+        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
+        let dense = vec![("d2", 0.9), ("d3", 0.8)];
+
+        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
+
+        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::default());
+
+        let attribution = attribute_top_k(&explained, 3);
+
+        // Both retrievers should have contributed
+        assert!(attribution.contains_key("bm25"));
+        assert!(attribution.contains_key("dense"));
+
+        let bm25_stats = &attribution["bm25"];
+        assert!(bm25_stats.top_k_count > 0);
+
+        let dense_stats = &attribution["dense"];
+        assert!(dense_stats.top_k_count > 0);
+    }
+
+    #[test]
+    fn rrf_explain_empty_lists() {
+        let empty: Vec<(&str, f32)> = vec![];
+        let non_empty = vec![("d1", 1.0)];
+
+        let retrievers = vec![RetrieverId::new("empty"), RetrieverId::new("non_empty")];
+
+        let explained = rrf_explain(
+            &[&empty[..], &non_empty[..]],
+            &retrievers,
+            RrfConfig::default(),
+        );
+
+        assert_eq!(explained.len(), 1);
+        assert_eq!(explained[0].id, "d1");
+        assert_eq!(explained[0].explanation.sources.len(), 1);
+    }
+
+    #[test]
+    fn rrf_explain_mismatched_lengths() {
+        let bm25 = vec![("d1", 12.5)];
+        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
+
+        // Mismatch: 1 list but 2 retriever IDs
+        let explained = rrf_explain(&[&bm25[..]], &retrievers, RrfConfig::default());
+
+        // Should return empty (safety check)
+        assert!(explained.is_empty());
+    }
+
+    #[test]
+    fn rrf_explain_top_k() {
+        let bm25 = vec![("d1", 12.5), ("d2", 11.0), ("d3", 10.0)];
+        let dense = vec![("d2", 0.9), ("d3", 0.8), ("d4", 0.7)];
+
+        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
+
+        let explained = rrf_explain(
+            &[&bm25[..], &dense[..]],
+            &retrievers,
+            RrfConfig::default().with_top_k(2),
+        );
+
+        assert_eq!(explained.len(), 2);
+    }
+
+    #[test]
+    fn combsum_explain_basic() {
+        let a = vec![("d1", 1.0), ("d2", 0.5)];
+        let b = vec![("d2", 1.0), ("d3", 0.5)];
+
+        let retrievers = vec![RetrieverId::new("a"), RetrieverId::new("b")];
+
+        let explained = combsum_explain(&[&a[..], &b[..]], &retrievers, FusionConfig::default());
+
+        assert_eq!(explained.len(), 3);
+        let d2 = explained.iter().find(|r| r.id == "d2").unwrap();
+        assert_eq!(d2.explanation.sources.len(), 2);
+    }
+
+    #[test]
+    fn combmax_basic() {
+        let a = [("d1", 1.0), ("d2", 0.5)];
+        let b = [("d2", 0.8), ("d3", 0.9)];
+
+        let result = combmax(&a, &b);
+        assert_eq!(result.len(), 3);
+        // d2 should have max(0.5, 0.8) = 0.8
+        let d2_score = result.iter().find(|(id, _)| *id == "d2").unwrap().1;
+        assert!((d2_score - 0.8).abs() < 1e-6);
+    }
+
+    #[test]
+    fn combmed_basic() {
+        let a = [("d1", 1.0), ("d2", 0.5)];
+        let b = [("d2", 0.8), ("d3", 0.9)];
+
+        let result = combmed(&a, &b);
+        assert_eq!(result.len(), 3);
+        // d2 should have median(0.5, 0.8) = 0.65
+        let d2_score = result.iter().find(|(id, _)| *id == "d2").unwrap().1;
+        assert!((d2_score - 0.65).abs() < 1e-6);
+    }
+
+    #[test]
+    fn rbc_basic() {
+        let a = [("d1", 1.0), ("d2", 0.5)];
+        let b = [("d2", 0.8), ("d3", 0.9)];
+
+        let result = rbc(&a, &b);
+        assert!(!result.is_empty());
+        // d2 appears in both lists, should rank high
+        let d2_rank = result.iter().position(|(id, _)| *id == "d2").unwrap();
+        assert!(d2_rank < 2);
+    }
+
+    #[test]
+    fn condorcet_basic() {
+        let a = [("d1", 1.0), ("d2", 0.5), ("d3", 0.3)];
+        let b = [("d2", 0.9), ("d1", 0.8), ("d3", 0.7)];
+
+        let result = condorcet(&a, &b);
+        assert!(!result.is_empty());
+        // d2 should win (rank 1,0 vs d1's 0,1)
+    }
+
+    #[test]
+    fn ndcg_basic() {
+        let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
+        let qrels = std::collections::HashMap::from([
+            ("d1", 2), // highly relevant
+            ("d2", 1), // relevant
+        ]);
+
+        let score = ndcg_at_k(&results, &qrels, 3);
+        assert!(score > 0.0 && score <= 1.0);
+    }
+
+    #[test]
+    fn mrr_basic() {
+        let results = vec![("d1", 1.0), ("d2", 0.9)];
+        let qrels = std::collections::HashMap::from([("d2", 1)]);
+
+        let score = mrr(&results, &qrels);
+        // d2 is at rank 1 (0-indexed), so MRR = 1/2 = 0.5
+        assert!((score - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn recall_basic() {
+        let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
+        let qrels = std::collections::HashMap::from([
+            ("d1", 1),
+            ("d2", 1),
+            ("d4", 1), // not in results
+        ]);
+
+        let score = recall_at_k(&results, &qrels, 3);
+        // 2 relevant docs in top-3 out of 3 total = 2/3
+        assert!((score - 2.0 / 3.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn fusion_strategy_rrf() {
+        let strategy = FusionStrategy::rrf(60);
+        let a = [("d1", 1.0), ("d2", 0.5)];
+        let b = [("d2", 0.9), ("d3", 0.8)];
+
+        let result = strategy.fuse(&[&a[..], &b[..]]);
+        assert!(!result.is_empty());
+        assert_eq!(strategy.name(), "rrf");
+        assert!(!strategy.uses_scores());
+    }
+
+    #[test]
+    fn normalize_scores_minmax() {
+        let scores = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
+        let normalized = normalize_scores(&scores, Normalization::MinMax);
+
+        assert_eq!(normalized.len(), 3);
+        // d1 should be 1.0, d3 should be 0.0
+        let d1 = normalized.iter().find(|(id, _)| *id == "d1").unwrap().1;
+        let d3 = normalized.iter().find(|(id, _)| *id == "d3").unwrap().1;
+        assert!((d1 - 1.0).abs() < 1e-6);
+        assert!((d3 - 0.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn normalize_scores_zscore() {
+        let scores = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
+        let normalized = normalize_scores(&scores, Normalization::ZScore);
+
+        assert_eq!(normalized.len(), 3);
+        // Mean = 5.0, std ≈ 4.08, so d1 should be positive, d3 negative
+        let d1 = normalized.iter().find(|(id, _)| *id == "d1").unwrap().1;
+        let d3 = normalized.iter().find(|(id, _)| *id == "d3").unwrap().1;
+        assert!(d1 > 0.0);
+        assert!(d3 < 0.0);
+    }
+
+    #[test]
+    fn normalize_scores_sum() {
+        let scores = vec![("d1", 2.0), ("d2", 1.0), ("d3", 1.0)];
+        let normalized = normalize_scores(&scores, Normalization::Sum);
+
+        let sum: f32 = normalized.iter().map(|(_, s)| s).sum();
+        assert!((sum - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn normalize_scores_rank() {
+        let scores = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
+        let normalized = normalize_scores(&scores, Normalization::Rank);
+
+        // Highest score should get highest rank-normalized value
+        let d1 = normalized.iter().find(|(id, _)| *id == "d1").unwrap().1;
+        let d3 = normalized.iter().find(|(id, _)| *id == "d3").unwrap().1;
+        assert!(d1 > d3);
+    }
+
+    #[test]
+    fn combsum_explain_shows_normalization() {
+        let a = vec![("d1", 1.0), ("d2", 0.5)];
+        let b = vec![("d2", 1.0), ("d3", 0.5)];
+
+        let retrievers = vec![RetrieverId::new("a"), RetrieverId::new("b")];
+        let explained = combsum_explain(&[&a[..], &b[..]], &retrievers, FusionConfig::default());
+
+        let d2 = explained.iter().find(|r| r.id == "d2").unwrap();
+        // d2 should have normalized scores from both sources
+        assert_eq!(d2.explanation.sources.len(), 2);
+        for source in &d2.explanation.sources {
+            assert!(source.normalized_score.is_some());
+        }
+    }
+
+    #[test]
+    fn combmnz_explain_shows_overlap_multiplier() {
+        let a = vec![("d1", 1.0)];
+        let b = vec![("d1", 1.0), ("d2", 0.5)];
+
+        let retrievers = vec![RetrieverId::new("a"), RetrieverId::new("b")];
+        let explained = combmnz_explain(&[&a[..], &b[..]], &retrievers, FusionConfig::default());
+
+        let d1 = explained.iter().find(|r| r.id == "d1").unwrap();
+        // d1 appears in both lists, so contributions should reflect multiplier
+        assert_eq!(d1.explanation.sources.len(), 2);
+        // Final score should be higher than combsum due to overlap bonus
+        let combsum_result = combsum(&a, &b);
+        let combsum_d1 = combsum_result.iter().find(|(id, _)| *id == "d1").unwrap().1;
+        assert!(d1.score > combsum_d1);
+    }
+
+    #[test]
+    fn dbsf_explain_shows_zscore() {
+        let a = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
+        let b = vec![("d1", 0.9), ("d2", 0.5), ("d4", 0.1)];
+
+        let retrievers = vec![RetrieverId::new("a"), RetrieverId::new("b")];
+        let explained = dbsf_explain(&[&a[..], &b[..]], &retrievers, FusionConfig::default());
+
+        let d1 = explained.iter().find(|r| r.id == "d1").unwrap();
+        // Should have z-score normalized contributions
+        for source in &d1.explanation.sources {
+            assert!(source.normalized_score.is_some());
+            // Z-scores should be in reasonable range (clipped to [-3, 3])
+            let z = source.normalized_score.unwrap();
+            assert!(z >= -3.0 && z <= 3.0);
+        }
+    }
+
+    #[test]
+    fn optimize_fusion_rrf_k() {
+        let qrels = std::collections::HashMap::from([("d1", 2), ("d2", 1)]);
+
+        let run1 = vec![("d1", 0.9), ("d2", 0.8)];
+        let run2 = vec![("d2", 0.9), ("d1", 0.7)];
+        let runs = vec![run1, run2];
+
+        let config = OptimizeConfig {
+            method: FusionMethod::Rrf { k: 60 },
+            metric: OptimizeMetric::Ndcg { k: 10 },
+            param_grid: ParamGrid::RrfK {
+                values: vec![20, 60, 100],
+            },
+        };
+
+        let optimized = optimize_fusion(&qrels, &runs, config);
+        assert!(optimized.best_score >= 0.0 && optimized.best_score <= 1.0);
+        assert!(!optimized.best_params.is_empty());
+    }
+
+    #[test]
+    fn optimize_fusion_weighted() {
+        let qrels = std::collections::HashMap::from([("d1", 1)]);
+
+        let run1 = [("d1", 0.9), ("d2", 0.5)];
+        let run2 = [("d1", 0.8), ("d2", 0.6)];
+        let runs = vec![run1.to_vec(), run2.to_vec()];
+
+        let config = OptimizeConfig {
+            method: FusionMethod::Weighted {
+                weight_a: 0.5,
+                weight_b: 0.5,
+                normalize: true,
+            },
+            metric: OptimizeMetric::Mrr,
+            param_grid: ParamGrid::Weighted {
+                weight_combinations: vec![vec![0.5, 0.5], vec![0.7, 0.3], vec![0.3, 0.7]],
+            },
+        };
+
+        let optimized = optimize_fusion(&qrels, &runs, config);
+        assert!(optimized.best_score >= 0.0);
+    }
+
+    #[test]
+    fn metrics_ndcg_perfect_ranking() {
+        // Perfect ranking: relevant docs at top
+        let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
+        let qrels = std::collections::HashMap::from([
+            ("d1", 2), // highly relevant
+            ("d2", 1), // relevant
+        ]);
+
+        let ndcg = ndcg_at_k(&results, &qrels, 10);
+        assert!(ndcg > 0.0 && ndcg <= 1.0);
+    }
+
+    #[test]
+    fn metrics_mrr_first_relevant() {
+        let results = vec![("d1", 1.0), ("d2", 0.9)];
+        let qrels = std::collections::HashMap::from([("d2", 1)]);
+
+        let mrr_score = mrr(&results, &qrels);
+        // d2 is at rank 1 (0-indexed), so MRR = 1/2 = 0.5
+        assert!((mrr_score - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn metrics_recall_complete() {
+        let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
+        let qrels = std::collections::HashMap::from([
+            ("d1", 1),
+            ("d2", 1),
+            ("d4", 1), // not in results
+        ]);
+
+        let recall = recall_at_k(&results, &qrels, 10);
+        // 2 relevant docs in results out of 3 total = 2/3
+        assert!((recall - 2.0 / 3.0).abs() < 1e-6);
     }
 }
