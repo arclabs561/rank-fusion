@@ -15,20 +15,18 @@
 //! # [("d2", 0.033), ("d1", 0.016), ("d3", 0.016)]
 //! ```
 
-#[cfg(feature = "pyo3")]
+use ::rank_fusion::{rrf_multi, rrf_with_config, RrfConfig};
 use pyo3::prelude::*;
-#[cfg(feature = "pyo3")]
 use pyo3::types::{PyList, PyTuple};
 
-#[cfg(feature = "pyo3")]
-use crate::{rrf, rrf_multi, RrfConfig};
-
 /// Python module for rank fusion.
-#[cfg(feature = "pyo3")]
 #[pymodule]
 fn rank_fusion(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(rrf_py, m)?)?;
-    m.add_function(wrap_pyfunction!(rrf_multi_py, m)?)?;
+    // Add functions with user-friendly names (aliases)
+    let rrf_func = wrap_pyfunction!(rrf_py, m)?;
+    let rrf_multi_func = wrap_pyfunction!(rrf_multi_py, m)?;
+    m.add("rrf", rrf_func)?;
+    m.add("rrf_multi", rrf_multi_func)?;
     m.add_class::<RrfConfigPy>()?;
     Ok(())
 }
@@ -42,7 +40,6 @@ fn rank_fusion(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///
 /// # Returns
 /// List of (id, score) tuples sorted by fused score (descending)
-#[cfg(feature = "pyo3")]
 #[pyfunction]
 #[pyo3(signature = (results_a, results_b, k = 60))]
 fn rrf_py(
@@ -50,13 +47,14 @@ fn rrf_py(
     results_a: &Bound<'_, PyList>,
     results_b: &Bound<'_, PyList>,
     k: u32,
-) -> PyResult<Bound<'_, PyList>> {
+) -> PyResult<Py<PyList>> {
     // Convert Python lists to Rust Vec<(String, f32)>
     let a: Vec<(String, f32)> = py_list_to_ranked(results_a)?;
     let b: Vec<(String, f32)> = py_list_to_ranked(results_b)?;
 
     // Call Rust function
-    let fused = rrf(&a, &b);
+    let config = RrfConfig::new(k);
+    let fused = rrf_with_config(&a, &b, config);
 
     // Convert back to Python list
     let result = PyList::empty_bound(py);
@@ -64,7 +62,7 @@ fn rrf_py(
         let tuple = PyTuple::new_bound(py, &[id.into_py(py), score.into_py(py)]);
         result.append(tuple)?;
     }
-    Ok(result)
+    Ok(result.into())
 }
 
 /// RRF fusion for multiple ranked lists.
@@ -75,10 +73,9 @@ fn rrf_py(
 ///
 /// # Returns
 /// List of (id, score) tuples sorted by fused score (descending)
-#[cfg(feature = "pyo3")]
 #[pyfunction]
 #[pyo3(signature = (lists, k = 60))]
-fn rrf_multi_py(py: Python<'_>, lists: &Bound<'_, PyList>, k: u32) -> PyResult<Bound<'_, PyList>> {
+fn rrf_multi_py(py: Python<'_>, lists: &Bound<'_, PyList>, k: u32) -> PyResult<Py<PyList>> {
     // Convert Python lists to Rust Vec<Vec<(String, f32)>>
     let mut rust_lists = Vec::new();
     for list in lists.iter() {
@@ -99,11 +96,10 @@ fn rrf_multi_py(py: Python<'_>, lists: &Bound<'_, PyList>, k: u32) -> PyResult<B
         let tuple = PyTuple::new_bound(py, &[id.into_py(py), score.into_py(py)]);
         result.append(tuple)?;
     }
-    Ok(result)
+    Ok(result.into())
 }
 
 /// Helper to convert Python list of (id, score) tuples to Rust Vec.
-#[cfg(feature = "pyo3")]
 fn py_list_to_ranked(py_list: &Bound<'_, PyList>) -> PyResult<Vec<(String, f32)>> {
     let mut result = Vec::new();
     for item in py_list.iter() {
@@ -121,13 +117,11 @@ fn py_list_to_ranked(py_list: &Bound<'_, PyList>) -> PyResult<Vec<(String, f32)>
 }
 
 /// Python wrapper for RrfConfig.
-#[cfg(feature = "pyo3")]
 #[pyclass]
 struct RrfConfigPy {
     inner: RrfConfig,
 }
 
-#[cfg(feature = "pyo3")]
 #[pymethods]
 impl RrfConfigPy {
     #[new]

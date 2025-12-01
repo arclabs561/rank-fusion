@@ -574,8 +574,15 @@ version = "0.1.19"
 dependencies = [
  "criterion",
  "proptest",
- "pyo3",
  "serde",
+]
+
+[[package]]
+name = "rank-fusion-python"
+version = "0.1.19"
+dependencies = [
+ "pyo3",
+ "rank-fusion",
 ]
 
 [[package]]

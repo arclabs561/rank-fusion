@@ -45,5 +45,5 @@ fn main() {
     println!("\nTo build for WebAssembly:");
     println!("1. Install wasm-pack: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh");
     println!("2. Build: wasm-pack build --target web --out-dir pkg");
-    println!("3. Use from JavaScript: import { rrf } from './pkg/rank_fusion.js'");
+    println!("3. Use from JavaScript: import {{ rrf }} from './pkg/rank_fusion.js'");
 }

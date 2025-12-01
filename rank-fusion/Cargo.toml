@@ -1,0 +1,27 @@
+[package]
+name = "rank-fusion"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Rank fusion algorithms for hybrid search — RRF, ISR, CombMNZ, Borda, DBSF. Zero dependencies."
+keywords = ["vector-search", "hybrid-search", "rrf", "rag", "search"]
+categories = ["algorithms", "data-structures", "mathematics"]
+repository = "https://github.com/arclabs561/rank-fusion"
+readme = "README.md"
+
+[dependencies]
+serde = { workspace = true, optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[dev-dependencies]
+criterion = { workspace = true }
+proptest = { workspace = true }
+
+[[bench]]
+name = "fusion"
+harness = false

@@ -1,29 +1,18 @@
-[package]
-name = "rank-fusion"
+[workspace]
+members = ["rank-fusion", "rank-fusion-python"]
+resolver = "2"
+default-members = ["rank-fusion"]
+
+[workspace.package]
 version = "0.1.19"
 edition = "2021"
 rust-version = "1.74"
 license = "MIT OR Apache-2.0"
-description = "Rank fusion algorithms for hybrid search — RRF, ISR, CombMNZ, Borda, DBSF. Zero dependencies."
-keywords = ["vector-search", "hybrid-search", "rrf", "rag", "search"]
-categories = ["algorithms", "data-structures", "mathematics"]
-repository = "https://github.com/arclabs561/rank-fusion"
-readme = "README.md"
 authors = ["Arc <attobop@gmail.com>"]
 
-[dependencies]
-serde = { version = "1.0", features = ["derive"], optional = true }
-pyo3 = { version = "0.21", features = ["extension-module"], optional = true }
-
-[features]
-default = []
-serde = ["dep:serde"]
-pyo3 = ["dep:pyo3"]
-
-[dev-dependencies]
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+pyo3 = { version = "0.21", features = ["extension-module", "abi3-py37"] }
 criterion = "0.5"
 proptest = "1"
 
-[[bench]]
-name = "fusion"
-harness = false

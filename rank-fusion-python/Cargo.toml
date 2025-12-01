@@ -1,0 +1,19 @@
+[package]
+name = "rank-fusion-python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Python bindings for rank-fusion"
+repository = "https://github.com/arclabs561/rank-fusion"
+readme = "README.md"
+
+[lib]
+name = "rank_fusion"
+crate-type = ["cdylib"]
+
+[dependencies]
+rank-fusion = { path = "../rank-fusion" }
+pyo3 = { workspace = true }
+
