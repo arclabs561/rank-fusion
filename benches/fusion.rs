@@ -47,7 +47,7 @@ fn bench_algorithms(c: &mut Criterion) {
 }
 
 fn bench_multi(c: &mut Criterion) {
-    use rank_fusion::{borda_multi, combmnz_multi, combsum_multi, rrf_multi, FusionConfig};
+    use rank_fusion::{borda_multi, combmnz_multi, combsum_multi, dbsf_multi, isr_multi, rrf_multi, rrf_weighted, FusionConfig};
 
     let mut g = c.benchmark_group("multi");
 
@@ -70,8 +70,56 @@ fn bench_multi(c: &mut Criterion) {
         bench.iter(|| black_box(combmnz_multi(&list_refs, FusionConfig::default())));
     });
 
+    g.bench_function("dbsf_multi_5x100", |bench| {
+        bench.iter(|| black_box(dbsf_multi(&list_refs, FusionConfig::default())));
+    });
+
+    g.bench_function("isr_multi_5x100", |bench| {
+        bench.iter(|| black_box(isr_multi(&list_refs, RrfConfig::default())));
+    });
+
+    // Weighted RRF with 5 lists
+    let weights = [0.2, 0.2, 0.2, 0.2, 0.2];
+    g.bench_function("rrf_weighted_5x100", |bench| {
+        bench.iter(|| black_box(rrf_weighted(&list_refs, &weights, RrfConfig::default()).unwrap()));
+    });
+
     g.finish();
 }
 
-criterion_group!(benches, bench_algorithms, bench_multi);
+fn bench_edge_cases(c: &mut Criterion) {
+    use rank_fusion::{rrf, rrf_multi, rrf_with_config, RrfConfig};
+
+    let mut g = c.benchmark_group("edge_cases");
+
+    // Empty lists
+    let empty: Vec<(String, f32)> = Vec::new();
+    let non_empty = ranked(100, "doc");
+    g.bench_function("rrf_one_empty", |bench| {
+        bench.iter(|| black_box(rrf(&empty, &non_empty)));
+    });
+
+    // Large overlap
+    let a = ranked(100, "a");
+    let b: Vec<(String, f32)> = a.iter().map(|(id, s)| (id.clone(), *s)).collect();
+    g.bench_function("rrf_identical_lists", |bench| {
+        bench.iter(|| black_box(rrf(&a, &b)));
+    });
+
+    // Many small lists
+    let many_lists: Vec<Vec<(String, f32)>> = (0..20).map(|i| ranked(10, &format!("list{i}"))).collect();
+    let many_refs: Vec<&[(String, f32)]> = many_lists.iter().map(|v| v.as_slice()).collect();
+    g.bench_function("rrf_multi_20x10", |bench| {
+        bench.iter(|| black_box(rrf_multi(&many_refs, RrfConfig::default())));
+    });
+
+    // High k value
+    g.bench_function("rrf_k_1000", |bench| {
+        bench.iter(|| black_box(rrf_with_config(&a, &b, RrfConfig::new(1000))));
+    });
+
+    g.finish();
+}
+
+criterion_group!(benches, bench_algorithms, bench_multi, bench_edge_cases);
 criterion_main!(benches);

@@ -65,6 +65,18 @@ pub type Result<T> = std::result::Result<T, FusionError>;
 // Configuration with Builder Pattern
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Threshold for treating weight sum as effectively zero.
+///
+/// Used in weighted fusion to detect invalid configurations where all weights
+/// are zero or near-zero, which would cause division by zero.
+const WEIGHT_EPSILON: f32 = 1e-9;
+
+/// Threshold for treating score range as effectively zero (all scores equal).
+///
+/// Used in min-max normalization to detect degenerate cases where all scores
+/// are identical, avoiding division by zero.
+const SCORE_RANGE_EPSILON: f32 = 1e-9;
+
 /// RRF configuration.
 ///
 /// # Example
@@ -79,6 +91,9 @@ pub type Result<T> = std::result::Result<T, FusionError>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RrfConfig {
     /// Smoothing constant (default: 60).
+    ///
+    /// **Must be >= 1** to avoid division by zero in the RRF formula.
+    /// Values < 1 will cause panics during fusion.
     pub k: u32,
     /// Maximum results to return (None = all).
     pub top_k: Option<usize>,
@@ -92,8 +107,21 @@ impl Default for RrfConfig {
 
 impl RrfConfig {
     /// Create config with custom k.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `k == 0` (would cause division by zero in RRF formula).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rank_fusion::RrfConfig;
+    ///
+    /// let config = RrfConfig::new(60);
+    /// ```
     #[must_use]
-    pub const fn new(k: u32) -> Self {
+    pub fn new(k: u32) -> Self {
+        assert!(k >= 1, "k must be >= 1 to avoid division by zero in RRF formula");
         Self { k, top_k: None }
     }
 
@@ -102,8 +130,13 @@ impl RrfConfig {
     /// - `k=60` — Standard RRF, works well for most cases
     /// - `k=1` — Top positions dominate heavily
     /// - `k=100+` — More uniform contribution across ranks
+    ///
+    /// # Panics
+    ///
+    /// Panics if `k == 0` (would cause division by zero in RRF formula).
     #[must_use]
-    pub const fn with_k(mut self, k: u32) -> Self {
+    pub fn with_k(mut self, k: u32) -> Self {
+        assert!(k >= 1, "k must be >= 1 to avoid division by zero in RRF formula");
         self.k = k;
         self
     }
@@ -323,8 +356,19 @@ impl FusionMethod {
     #[must_use]
     pub fn fuse<I: Clone + Eq + Hash>(&self, a: &[(I, f32)], b: &[(I, f32)]) -> Vec<(I, f32)> {
         match self {
-            Self::Rrf { k } => crate::rrf_multi(&[a, b], RrfConfig::new(*k)),
-            Self::Isr { k } => crate::isr_multi(&[a, b], RrfConfig::new(*k)),
+            Self::Rrf { k } => {
+                // Validate k at use time to avoid panics from invalid FusionMethod construction
+                if *k == 0 {
+                    return Vec::new();
+                }
+                crate::rrf_multi(&[a, b], RrfConfig::new(*k))
+            }
+            Self::Isr { k } => {
+                if *k == 0 {
+                    return Vec::new();
+                }
+                crate::isr_multi(&[a, b], RrfConfig::new(*k))
+            }
             Self::CombSum => crate::combsum(a, b),
             Self::CombMnz => crate::combmnz(a, b),
             Self::Borda => crate::borda(a, b),
@@ -395,6 +439,13 @@ impl FusionMethod {
 ///
 /// Use [`rrf_with_config`] to customize the k parameter (lower k = more top-heavy).
 ///
+/// # Duplicate Document IDs
+///
+/// If a document ID appears multiple times in the same list, **all occurrences contribute**
+/// to the RRF score based on their respective ranks. For example, if "d1" appears at
+/// rank 0 and rank 5 in list A, its contribution from list A is `1/(k+0) + 1/(k+5)`.
+/// This differs from some implementations that take only the first occurrence.
+///
 /// # Complexity
 ///
 /// O(n log n) where n = |a| + |b| (dominated by final sort).
@@ -443,13 +494,26 @@ pub fn rrf_with_config<I: Clone + Eq + Hash>(
     config: RrfConfig,
 ) -> Vec<(I, f32)> {
     let k = config.k as f32;
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    // Pre-allocate capacity to avoid reallocations during insertion
+    let estimated_size = results_a.len() + results_b.len();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
+    // Use get_mut + insert pattern to avoid cloning IDs when entry already exists
     for (rank, (id, _)) in results_a.iter().enumerate() {
-        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
+        let contribution = 1.0 / (k + rank as f32);
+        if let Some(score) = scores.get_mut(id) {
+            *score += contribution;
+        } else {
+            scores.insert(id.clone(), contribution);
+        }
     }
     for (rank, (id, _)) in results_b.iter().enumerate() {
-        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
+        let contribution = 1.0 / (k + rank as f32);
+        if let Some(score) = scores.get_mut(id) {
+            *score += contribution;
+        } else {
+            scores.insert(id.clone(), contribution);
+        }
     }
 
     finalize(scores, config.top_k)
@@ -467,11 +531,22 @@ pub fn rrf_into<I: Clone + Eq + Hash>(
     let k = config.k as f32;
     let mut scores: HashMap<I, f32> = HashMap::with_capacity(results_a.len() + results_b.len());
 
+    // Use get_mut + insert pattern to avoid cloning IDs when entry already exists
     for (rank, (id, _)) in results_a.iter().enumerate() {
-        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
+        let contribution = 1.0 / (k + rank as f32);
+        if let Some(score) = scores.get_mut(id) {
+            *score += contribution;
+        } else {
+            scores.insert(id.clone(), contribution);
+        }
     }
     for (rank, (id, _)) in results_b.iter().enumerate() {
-        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
+        let contribution = 1.0 / (k + rank as f32);
+        if let Some(score) = scores.get_mut(id) {
+            *score += contribution;
+        } else {
+            scores.insert(id.clone(), contribution);
+        }
     }
 
     output.extend(scores);
@@ -482,6 +557,17 @@ pub fn rrf_into<I: Clone + Eq + Hash>(
 }
 
 /// RRF for 3+ result lists.
+///
+/// # Empty Lists
+///
+/// If `lists` is empty, returns an empty result. If some lists are empty,
+/// they contribute zero scores (documents not appearing in those lists
+/// receive no contribution from them).
+///
+/// # Complexity
+///
+/// O(L×N + U×log U) where L = number of lists, N = average list size,
+/// U = number of unique document IDs across all lists.
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn rrf_multi<I, L>(lists: &[L], config: RrfConfig) -> Vec<(I, f32)>
@@ -489,12 +575,23 @@ where
     I: Clone + Eq + Hash,
     L: AsRef<[(I, f32)]>,
 {
+    if lists.is_empty() {
+        return Vec::new();
+    }
     let k = config.k as f32;
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    // Estimate capacity: sum of all list sizes (may overestimate due to duplicates)
+    let estimated_size: usize = lists.iter().map(|l| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
+    // Use get_mut + insert pattern to avoid cloning IDs when entry already exists
     for list in lists {
         for (rank, (id, _)) in list.as_ref().iter().enumerate() {
-            *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32);
+            let contribution = 1.0 / (k + rank as f32);
+            if let Some(score) = scores.get_mut(id) {
+                *score += contribution;
+            } else {
+                scores.insert(id.clone(), contribution);
+            }
         }
     }
 
@@ -524,25 +621,40 @@ where
 ///
 /// # Errors
 ///
-/// Returns [`FusionError::ZeroWeights`] if weights sum to zero.
+/// - Returns [`FusionError::ZeroWeights`] if weights sum to zero.
+/// - Returns [`FusionError::InvalidConfig`] if `lists.len() != weights.len()`.
 #[allow(clippy::cast_precision_loss)]
 pub fn rrf_weighted<I, L>(lists: &[L], weights: &[f32], config: RrfConfig) -> Result<Vec<(I, f32)>>
 where
     I: Clone + Eq + Hash,
     L: AsRef<[(I, f32)]>,
 {
+    if lists.len() != weights.len() {
+        return Err(FusionError::InvalidConfig(format!(
+            "lists.len() ({}) != weights.len() ({}). Each list must have a corresponding weight.",
+            lists.len(),
+            weights.len()
+        )));
+    }
     let weight_sum: f32 = weights.iter().sum();
-    if weight_sum.abs() < 1e-9 {
+    if weight_sum.abs() < WEIGHT_EPSILON {
         return Err(FusionError::ZeroWeights);
     }
 
     let k = config.k as f32;
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    // Pre-allocate capacity
+    let estimated_size: usize = lists.iter().map(|l| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
     for (list, &weight) in lists.iter().zip(weights.iter()) {
         let normalized_weight = weight / weight_sum;
         for (rank, (id, _)) in list.as_ref().iter().enumerate() {
-            *scores.entry(id.clone()).or_default() += normalized_weight / (k + rank as f32);
+            let contribution = normalized_weight / (k + rank as f32);
+            if let Some(score) = scores.get_mut(id) {
+                *score += contribution;
+            } else {
+                scores.insert(id.clone(), contribution);
+            }
         }
     }
 
@@ -607,13 +719,25 @@ pub fn isr_with_config<I: Clone + Eq + Hash>(
     config: RrfConfig,
 ) -> Vec<(I, f32)> {
     let k = config.k as f32;
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    let estimated_size = results_a.len() + results_b.len();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
+    // Use get_mut + insert pattern to avoid cloning IDs when entry already exists
     for (rank, (id, _)) in results_a.iter().enumerate() {
-        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32).sqrt();
+        let contribution = 1.0 / (k + rank as f32).sqrt();
+        if let Some(score) = scores.get_mut(id) {
+            *score += contribution;
+        } else {
+            scores.insert(id.clone(), contribution);
+        }
     }
     for (rank, (id, _)) in results_b.iter().enumerate() {
-        *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32).sqrt();
+        let contribution = 1.0 / (k + rank as f32).sqrt();
+        if let Some(score) = scores.get_mut(id) {
+            *score += contribution;
+        } else {
+            scores.insert(id.clone(), contribution);
+        }
     }
 
     finalize(scores, config.top_k)
@@ -627,12 +751,22 @@ where
     I: Clone + Eq + Hash,
     L: AsRef<[(I, f32)]>,
 {
+    if lists.is_empty() {
+        return Vec::new();
+    }
     let k = config.k as f32;
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    let estimated_size: usize = lists.iter().map(|l| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
     for list in lists {
+        // Use get_mut + insert pattern to avoid cloning IDs when entry already exists
         for (rank, (id, _)) in list.as_ref().iter().enumerate() {
-            *scores.entry(id.clone()).or_default() += 1.0 / (k + rank as f32).sqrt();
+            let contribution = 1.0 / (k + rank as f32).sqrt();
+            if let Some(score) = scores.get_mut(id) {
+                *score += contribution;
+            } else {
+                scores.insert(id.clone(), contribution);
+            }
         }
     }
 
@@ -683,11 +817,12 @@ where
     L: AsRef<[(I, f32)]>,
 {
     let total_weight: f32 = lists.iter().map(|(_, w)| w).sum();
-    if total_weight.abs() < 1e-9 {
+    if total_weight.abs() < WEIGHT_EPSILON {
         return Err(FusionError::ZeroWeights);
     }
 
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    let estimated_size: usize = lists.iter().map(|(l, _)| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
     for (list, weight) in lists {
         let items = list.as_ref();
@@ -698,7 +833,12 @@ where
             (1.0, 0.0)
         };
         for (id, s) in items {
-            *scores.entry(id.clone()).or_default() += w * (s - off) * norm;
+            let contribution = w * (s - off) * norm;
+            if let Some(score) = scores.get_mut(id) {
+                *score += contribution;
+            } else {
+                scores.insert(id.clone(), contribution);
+            }
         }
     }
 
@@ -712,11 +852,12 @@ where
     L: AsRef<[(I, f32)]>,
 {
     let total_weight: f32 = lists.iter().map(|(_, w)| w).sum();
-    if total_weight.abs() < 1e-9 {
+    if total_weight.abs() < WEIGHT_EPSILON {
         return Vec::new();
     }
 
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    let estimated_size: usize = lists.iter().map(|(l, _)| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
     for (list, weight) in lists {
         let items = list.as_ref();
@@ -727,7 +868,12 @@ where
             (1.0, 0.0)
         };
         for (id, s) in items {
-            *scores.entry(id.clone()).or_default() += w * (s - off) * norm;
+            let contribution = w * (s - off) * norm;
+            if let Some(score) = scores.get_mut(id) {
+                *score += contribution;
+            } else {
+                scores.insert(id.clone(), contribution);
+            }
         }
     }
 
@@ -762,19 +908,34 @@ pub fn combsum_with_config<I: Clone + Eq + Hash>(
 }
 
 /// `CombSUM` for 3+ result lists.
+///
+/// # Empty Lists
+///
+/// If `lists` is empty, returns an empty result. Empty lists within the slice
+/// contribute zero scores (documents not appearing in those lists receive
+/// no contribution from them).
 #[must_use]
 pub fn combsum_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
 where
     I: Clone + Eq + Hash,
     L: AsRef<[(I, f32)]>,
 {
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    if lists.is_empty() {
+        return Vec::new();
+    }
+    let estimated_size: usize = lists.iter().map(|l| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
     for list in lists {
         let items = list.as_ref();
         let (norm, off) = min_max_params(items);
         for (id, s) in items {
-            *scores.entry(id.clone()).or_default() += (s - off) * norm;
+            let contribution = (s - off) * norm;
+            if let Some(score) = scores.get_mut(id) {
+                *score += contribution;
+            } else {
+                scores.insert(id.clone(), contribution);
+            }
         }
     }
 
@@ -810,6 +971,11 @@ pub fn combmnz_with_config<I: Clone + Eq + Hash>(
 }
 
 /// `CombMNZ` for 3+ result lists.
+///
+/// # Empty Lists
+///
+/// If `lists` is empty, returns an empty result. Empty lists within the slice
+/// contribute zero scores and don't affect overlap counts.
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn combmnz_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
@@ -817,15 +983,24 @@ where
     I: Clone + Eq + Hash,
     L: AsRef<[(I, f32)]>,
 {
-    let mut scores: HashMap<I, (f32, u32)> = HashMap::new();
+    if lists.is_empty() {
+        return Vec::new();
+    }
+    let estimated_size: usize = lists.iter().map(|l| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, (f32, u32)> = HashMap::with_capacity(estimated_size);
 
     for list in lists {
         let items = list.as_ref();
         let (norm, off) = min_max_params(items);
         for (id, s) in items {
-            let e = scores.entry(id.clone()).or_default();
-            e.0 += (s - off) * norm;
-            e.1 += 1;
+            // Use get_mut + insert pattern to avoid cloning IDs when entry already exists
+            let contribution = (s - off) * norm;
+            if let Some(entry) = scores.get_mut(id) {
+                entry.0 += contribution;
+                entry.1 += 1;
+            } else {
+                scores.insert(id.clone(), (contribution, 1));
+            }
         }
     }
 
@@ -873,6 +1048,12 @@ pub fn borda_with_config<I: Clone + Eq + Hash>(
 }
 
 /// Borda count for 3+ result lists.
+///
+/// # Empty Lists
+///
+/// If `lists` is empty, returns an empty result. Empty lists within the slice
+/// contribute zero scores (documents not appearing in those lists receive
+/// no Borda points from them).
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn borda_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
@@ -880,13 +1061,22 @@ where
     I: Clone + Eq + Hash,
     L: AsRef<[(I, f32)]>,
 {
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    if lists.is_empty() {
+        return Vec::new();
+    }
+    let estimated_size: usize = lists.iter().map(|l| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
     for list in lists {
         let items = list.as_ref();
         let n = items.len() as f32;
         for (rank, (id, _)) in items.iter().enumerate() {
-            *scores.entry(id.clone()).or_default() += n - rank as f32;
+            let contribution = n - rank as f32;
+            if let Some(score) = scores.get_mut(id) {
+                *score += contribution;
+            } else {
+                scores.insert(id.clone(), contribution);
+            }
         }
     }
 
@@ -934,13 +1124,29 @@ pub fn dbsf_with_config<I: Clone + Eq + Hash>(
 }
 
 /// DBSF for 3+ result lists.
+///
+/// # Empty Lists
+///
+/// If `lists` is empty, returns an empty result. Empty lists within the slice
+/// contribute zero scores (documents not appearing in those lists receive
+/// no z-score contribution from them).
+///
+/// # Degenerate Cases
+///
+/// If all scores in a list are equal (zero variance), that list contributes
+/// z-score=0.0 for all documents, which is mathematically correct but
+/// effectively ignores that list's contribution.
 #[must_use]
 pub fn dbsf_multi<I, L>(lists: &[L], config: FusionConfig) -> Vec<(I, f32)>
 where
     I: Clone + Eq + Hash,
     L: AsRef<[(I, f32)]>,
 {
-    let mut scores: HashMap<I, f32> = HashMap::new();
+    if lists.is_empty() {
+        return Vec::new();
+    }
+    let estimated_size: usize = lists.iter().map(|l| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
 
     for list in lists {
         let items = list.as_ref();
@@ -948,12 +1154,16 @@ where
 
         for (id, s) in items {
             // Z-score normalize and clip to [-3, 3]
-            let z = if std > 1e-9 {
+            let z = if std > SCORE_RANGE_EPSILON {
                 ((s - mean) / std).clamp(-3.0, 3.0)
             } else {
                 0.0 // All scores equal
             };
-            *scores.entry(id.clone()).or_default() += z;
+            if let Some(score) = scores.get_mut(id) {
+                *score += z;
+            } else {
+                scores.insert(id.clone(), z);
+            }
         }
     }
 
@@ -961,7 +1171,7 @@ where
 }
 
 /// Compute mean and standard deviation for z-score normalization.
-#[inline]
+#[inline(always)]
 fn zscore_params<I>(results: &[(I, f32)]) -> (f32, f32) {
     if results.is_empty() {
         return (0.0, 1.0);
@@ -984,7 +1194,9 @@ fn zscore_params<I>(results: &[(I, f32)]) -> (f32, f32) {
 /// Uses `total_cmp` for deterministic NaN handling (NaN sorts after valid values).
 #[inline]
 fn finalize<I>(scores: HashMap<I, f32>, top_k: Option<usize>) -> Vec<(I, f32)> {
-    let mut results: Vec<_> = scores.into_iter().collect();
+    let capacity = top_k.map(|k| k.min(scores.len())).unwrap_or(scores.len());
+    let mut results = Vec::with_capacity(capacity);
+    results.extend(scores);
     sort_scored_desc(&mut results);
     if let Some(k) = top_k {
         results.truncate(k);
@@ -1006,7 +1218,7 @@ fn sort_scored_desc<I>(results: &mut [(I, f32)]) {
 ///
 /// For single-element lists or lists where all scores are equal,
 /// returns `(0.0, 0.0)` so each element contributes its raw score.
-#[inline]
+#[inline(always)]
 fn min_max_params<I>(results: &[(I, f32)]) -> (f32, f32) {
     if results.is_empty() {
         return (1.0, 0.0);
@@ -1017,7 +1229,7 @@ fn min_max_params<I>(results: &[(I, f32)]) -> (f32, f32) {
             (lo.min(*s), hi.max(*s))
         });
     let range = max - min;
-    if range < 1e-9 {
+    if range < SCORE_RANGE_EPSILON {
         // All scores equal: just pass through the score (norm=1, offset=0)
         (1.0, 0.0)
     } else {
@@ -1507,6 +1719,98 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "k must be >= 1")]
+    fn k_zero_panics() {
+        let _ = RrfConfig::new(0);
+    }
+
+    #[test]
+    #[should_panic(expected = "k must be >= 1")]
+    fn k_zero_with_k_panics() {
+        let _ = RrfConfig::default().with_k(0);
+    }
+
+    #[test]
+    fn all_nan_scores() {
+        let a = vec![("d1", f32::NAN), ("d2", f32::NAN)];
+        let b = vec![("d3", f32::NAN), ("d4", f32::NAN)];
+
+        // Should not panic, but results may contain NaN
+        let f = rrf(&a, &b);
+        assert_eq!(f.len(), 4);
+        // NaN values are valid RRF scores (1/(k+rank) is always finite)
+        // But if all scores are NaN, the RRF calculation still works
+        // Actually, RRF ignores scores, so NaN scores don't matter
+        // All documents get RRF scores based on ranks, which are finite
+        for (_, score) in &f {
+            assert!(score.is_finite(), "RRF scores should be finite (based on ranks, not input scores)");
+        }
+    }
+
+    #[test]
+    fn empty_lists_multi() {
+        let empty: Vec<Vec<(&str, f32)>> = vec![];
+        assert_eq!(rrf_multi(&empty, RrfConfig::default()).len(), 0);
+        assert_eq!(combsum_multi(&empty, FusionConfig::default()).len(), 0);
+        assert_eq!(combmnz_multi(&empty, FusionConfig::default()).len(), 0);
+        assert_eq!(borda_multi(&empty, FusionConfig::default()).len(), 0);
+        assert_eq!(dbsf_multi(&empty, FusionConfig::default()).len(), 0);
+        assert_eq!(isr_multi(&empty, RrfConfig::default()).len(), 0);
+    }
+
+    #[test]
+    fn rrf_weighted_list_weight_mismatch() {
+        let a = [("d1", 1.0)];
+        let b = [("d2", 1.0)];
+        let weights = [0.5, 0.5, 0.0]; // 3 weights for 2 lists
+
+        let result = rrf_weighted(&[&a[..], &b[..]], &weights, RrfConfig::default());
+        assert!(matches!(result, Err(FusionError::InvalidConfig(_))));
+    }
+
+    #[test]
+    fn rrf_weighted_list_weight_mismatch_short() {
+        let a = [("d1", 1.0)];
+        let b = [("d2", 1.0)];
+        let weights = [0.5]; // 1 weight for 2 lists
+
+        let result = rrf_weighted(&[&a[..], &b[..]], &weights, RrfConfig::default());
+        assert!(matches!(result, Err(FusionError::InvalidConfig(_))));
+    }
+
+    #[test]
+    fn duplicate_ids_commutative() {
+        // Test that duplicate handling is commutative
+        let a = vec![("d1", 1.0), ("d1", 0.5), ("d2", 0.3)];
+        let b = vec![("d2", 0.9), ("d3", 0.7)];
+
+        let ab = rrf(&a, &b);
+        let ba = rrf(&b, &a);
+
+        // Should have same document IDs (order may differ due to ties)
+        let ab_ids: Vec<&str> = ab.iter().map(|(id, _)| *id).collect();
+        let ba_ids: Vec<&str> = ba.iter().map(|(id, _)| *id).collect();
+        assert_eq!(ab_ids.len(), ba_ids.len());
+        // All IDs should appear in both
+        for id in &ab_ids {
+            assert!(ba_ids.contains(id));
+        }
+    }
+
+    #[test]
+    fn dbsf_zero_variance() {
+        // All scores equal in one list
+        let a = vec![("d1", 1.0), ("d2", 1.0), ("d3", 1.0)];
+        let b = vec![("d1", 0.9), ("d2", 0.5), ("d3", 0.1)];
+
+        // Should not panic, list a contributes z-score=0.0 for all
+        let f = dbsf(&a, &b);
+        assert_eq!(f.len(), 3);
+        // d1 should win (0.0 + positive z-score from b)
+        assert_eq!(f[0].0, "d1");
+    }
+
+    #[test]
     fn single_item_lists() {
         let a = vec![("d1", 1.0)];
         let b = vec![("d1", 1.0)];
@@ -1675,6 +1979,13 @@ mod proptests {
         proptest::collection::vec((0u32..100, 0.0f32..1.0), 0..max_len)
     }
 
+    #[test]
+    fn rrf_multi_empty_lists() {
+        let empty: Vec<Vec<(u32, f32)>> = vec![];
+        let result = rrf_multi(&empty, RrfConfig::default());
+        assert!(result.is_empty());
+    }
+
     proptest! {
         #[test]
         fn rrf_output_bounded(a in arb_results(50), b in arb_results(50)) {
@@ -1777,6 +2088,54 @@ mod proptests {
                 prop_assert!((score_ab - score_ba).abs() < 1e-5,
                     "DBSF not commutative for id {:?}: {} vs {}", id, score_ab, score_ba);
             }
+        }
+
+        #[test]
+        fn rrf_duplicate_handling_commutative(a in arb_results(20), b in arb_results(20)) {
+            // Create lists with potential duplicates by allowing same IDs
+            let mut a_with_dups = a.clone();
+            // Add a duplicate at a different rank
+            if !a_with_dups.is_empty() {
+                let dup_id = a_with_dups[0].0;
+                a_with_dups.push((dup_id, 0.5));
+            }
+
+            let ab = rrf(&a_with_dups, &b);
+            let ba = rrf(&b, &a_with_dups);
+
+            // Should have same document IDs (order may differ due to ties)
+            let ab_ids: std::collections::HashSet<_> = ab.iter().map(|(id, _)| *id).collect();
+            let ba_ids: std::collections::HashSet<_> = ba.iter().map(|(id, _)| *id).collect();
+            prop_assert_eq!(ab_ids, ba_ids);
+        }
+
+        #[test]
+        fn rrf_multi_some_empty_lists(
+            a in arb_results(10).prop_filter("need items", |v| !v.is_empty()),
+            b in arb_results(10).prop_filter("need items", |v| !v.is_empty())
+        ) {
+            let empty: Vec<(u32, f32)> = vec![];
+            let lists: Vec<&[(u32, f32)]> = vec![&a, &empty, &b];
+            let result = rrf_multi(&lists, RrfConfig::default());
+            // Should still produce results from non-empty lists
+            prop_assert!(!result.is_empty());
+        }
+
+        #[test]
+        fn rrf_weighted_length_validation(
+            a in arb_results(5),
+            b in arb_results(5)
+        ) {
+            // Test that mismatched lengths are caught
+            let lists: Vec<&[(u32, f32)]> = vec![&a, &b];
+            let weights_short = [0.5]; // 1 weight for 2 lists
+            let weights_long = [0.3, 0.3, 0.4]; // 3 weights for 2 lists
+
+            let result_short = rrf_weighted(&lists, &weights_short, RrfConfig::default());
+            let result_long = rrf_weighted(&lists, &weights_long, RrfConfig::default());
+
+            prop_assert!(matches!(result_short, Err(FusionError::InvalidConfig(_))));
+            prop_assert!(matches!(result_long, Err(FusionError::InvalidConfig(_))));
         }
 
         #[test]
