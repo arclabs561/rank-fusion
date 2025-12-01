@@ -121,7 +121,10 @@ impl RrfConfig {
     /// ```
     #[must_use]
     pub fn new(k: u32) -> Self {
-        assert!(k >= 1, "k must be >= 1 to avoid division by zero in RRF formula");
+        assert!(
+            k >= 1,
+            "k must be >= 1 to avoid division by zero in RRF formula"
+        );
         Self { k, top_k: None }
     }
 
@@ -136,7 +139,10 @@ impl RrfConfig {
     /// Panics if `k == 0` (would cause division by zero in RRF formula).
     #[must_use]
     pub fn with_k(mut self, k: u32) -> Self {
-        assert!(k >= 1, "k must be >= 1 to avoid division by zero in RRF formula");
+        assert!(
+            k >= 1,
+            "k must be >= 1 to avoid division by zero in RRF formula"
+        );
         self.k = k;
         self
     }
@@ -1743,7 +1749,10 @@ mod tests {
         // Actually, RRF ignores scores, so NaN scores don't matter
         // All documents get RRF scores based on ranks, which are finite
         for (_, score) in &f {
-            assert!(score.is_finite(), "RRF scores should be finite (based on ranks, not input scores)");
+            assert!(
+                score.is_finite(),
+                "RRF scores should be finite (based on ranks, not input scores)"
+            );
         }
     }
 

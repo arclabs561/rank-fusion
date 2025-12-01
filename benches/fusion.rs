@@ -47,7 +47,10 @@ fn bench_algorithms(c: &mut Criterion) {
 }
 
 fn bench_multi(c: &mut Criterion) {
-    use rank_fusion::{borda_multi, combmnz_multi, combsum_multi, dbsf_multi, isr_multi, rrf_multi, rrf_weighted, FusionConfig};
+    use rank_fusion::{
+        borda_multi, combmnz_multi, combsum_multi, dbsf_multi, isr_multi, rrf_multi, rrf_weighted,
+        FusionConfig,
+    };
 
     let mut g = c.benchmark_group("multi");
 
@@ -107,7 +110,8 @@ fn bench_edge_cases(c: &mut Criterion) {
     });
 
     // Many small lists
-    let many_lists: Vec<Vec<(String, f32)>> = (0..20).map(|i| ranked(10, &format!("list{i}"))).collect();
+    let many_lists: Vec<Vec<(String, f32)>> =
+        (0..20).map(|i| ranked(10, &format!("list{i}"))).collect();
     let many_refs: Vec<&[(String, f32)]> = many_lists.iter().map(|v| v.as_slice()).collect();
     g.bench_function("rrf_multi_20x10", |bench| {
         bench.iter(|| black_box(rrf_multi(&many_refs, RrfConfig::default())));
