@@ -11,6 +11,9 @@ categories = ["algorithms", "data-structures", "mathematics"]
 repository = "https://github.com/arclabs561/rank-fusion"
 readme = "README.md"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 serde = { workspace = true, optional = true }
 
