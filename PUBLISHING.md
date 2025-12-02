@@ -106,8 +106,8 @@ npm publish --access public
 After publishing, verify:
 
 1. **crates.io**: https://crates.io/crates/rank-fusion
-2. **PyPI**: https://pypi.org/project/rank-fusion-python/
-3. **npm** (if applicable): https://www.npmjs.com/package/rank-fusion
+2. **PyPI**: https://pypi.org/project/rank-fusion/
+3. **npm** (if applicable): https://www.npmjs.com/package/@arclabs561/rank-fusion
 
 Test installation:
 
@@ -116,9 +116,9 @@ Test installation:
 cargo add rank-fusion
 
 # Python
-pip install rank-fusion-python
+pip install rank-fusion
 
 # npm (if applicable)
-npm install rank-fusion
+npm install @arclabs561/rank-fusion
 ```
 
