@@ -52,6 +52,58 @@ dense = [("d2", 0.9), ("d3", 0.8)]
 fused = rank_fusion.rrf(bm25, dense, k=60)
 ```
 
+### Node.js / WebAssembly
+
+**Install from npm:**
+
+```bash
+npm install @arclabs561/rank-fusion
+```
+
+**Usage in Node.js:**
+
+```javascript
+const { rrf } = require('@arclabs561/rank-fusion');
+
+// Fuse two ranked lists
+const bm25 = [["d1", 12.5], ["d2", 11.0]];
+const dense = [["d2", 0.9], ["d3", 0.8]];
+
+const fused = rrf(bm25, dense, 60);
+// Result: [["d2", 0.033], ["d1", 0.016], ["d3", 0.016]]
+// d2 ranks highest (appears in both lists)
+```
+
+**Usage in TypeScript:**
+
+```typescript
+import { rrf } from '@arclabs561/rank-fusion';
+
+const bm25: [string, number][] = [["d1", 12.5], ["d2", 11.0]];
+const dense: [string, number][] = [["d2", 0.9], ["d3", 0.8]];
+
+const fused = rrf(bm25, dense, 60);
+```
+
+**Usage in Browser (ES Modules):**
+
+```javascript
+import init, { rrf } from '@arclabs561/rank-fusion';
+
+async function fuseResults() {
+  // Initialize WASM module
+  await init();
+  
+  const bm25 = [["d1", 12.5], ["d2", 11.0]];
+  const dense = [["d2", 0.9], ["d3", 0.8]];
+  
+  const fused = rrf(bm25, dense, 60);
+  console.log("Fused results:", fused);
+}
+
+fuseResults();
+```
+
 ## Documentation
 
 - [Core crate documentation](rank-fusion/README.md)

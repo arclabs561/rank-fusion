@@ -15,3 +15,4 @@ evals/eval_results.json
 *.so
 *.dylib
 *.dll
+.env

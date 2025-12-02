@@ -7,7 +7,7 @@ Python bindings for [`rank-fusion`](../rank-fusion/README.md) — rank fusion al
 ### From PyPI
 
 ```bash
-pip install rank-fusion-python
+pip install rank-fusion
 ```
 
 ### From source

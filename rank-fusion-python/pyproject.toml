@@ -3,7 +3,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "rank-fusion-python"
+name = "rank-fusion"
 version = "0.1.19"
 description = "Python bindings for rank-fusion — rank fusion algorithms for hybrid search"
 readme = "README.md"
