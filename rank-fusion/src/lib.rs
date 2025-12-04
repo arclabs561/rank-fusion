@@ -608,6 +608,14 @@ impl FusionMethod {
 ///
 /// O(n log n) where n = |a| + |b| (dominated by final sort).
 ///
+/// # Input Validation
+///
+/// This function does not validate inputs. For validation, use `validate()`
+/// after fusion. Edge cases handled:
+/// - Empty lists: Returns items from non-empty list(s)
+/// - k=0: Returns empty Vec (use `validate()` to catch this)
+/// - Non-finite scores: Ignored (RRF is rank-based)
+///
 /// # Example
 ///
 /// ```rust
