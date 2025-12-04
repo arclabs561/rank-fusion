@@ -55,6 +55,20 @@
 //! - `dbsf_multi(lists, top_k?)` - DBSF for 3+ lists
 //! - `standardized_multi(lists, clip_min?, clip_max?, top_k?)` - Standardized fusion for 3+ lists
 //!
+//! ## Explainability
+//! - `rrf_explain(lists, retriever_ids, k?, top_k?)` - RRF with provenance
+//! - `combsum_explain(lists, retriever_ids, top_k?)` - CombSUM with provenance
+//! - `combmnz_explain(lists, retriever_ids, top_k?)` - CombMNZ with provenance
+//! - `dbsf_explain(lists, retriever_ids, top_k?)` - DBSF with provenance
+//!
+//! ## Validation
+//! - `validate(results, strict, expected_top_k?)` - Comprehensive validation
+//! - `validate_sorted(results)` - Check if sorted by score
+//! - `validate_no_duplicates(results)` - Check for duplicate IDs
+//! - `validate_finite_scores(results)` - Check for NaN/Infinity
+//! - `validate_non_negative_scores(results)` - Warn on negative scores
+//! - `validate_bounds(results, max_results?)` - Check result count
+//!
 //! # Error Handling
 //!
 //! All functions return `Result<JsValue, JsValue>`. Errors include:
@@ -654,4 +668,776 @@ pub fn standardized_multi(
 
     let fused = crate::standardized_multi(&lists_vec, config);
     Ok(results_to_js(&fused))
+}
+
+/// RRF fusion with explainability (returns provenance information).
+///
+/// # Arguments
+/// * `lists` - Array of result lists, each as array of `[id, score]` pairs
+/// * `retriever_ids` - Array of retriever identifiers (strings)
+/// * `k` - Smoothing constant (default: 60, must be >= 1)
+/// * `top_k` - Maximum number of results to return (default: None = all)
+///
+/// # Returns
+/// Array of objects with structure:
+/// ```javascript
+/// {
+///   id: "doc1",
+///   score: 0.123,
+///   explanation: {
+///     sources: [
+///       { retriever_id: "bm25", rank: 0, score: 12.5, contribution: 0.016 },
+///       { retriever_id: "dense", rank: 1, score: 0.9, contribution: 0.016 }
+///     ],
+///     consensus_score: 1.0, // fraction of lists containing this doc
+///     total_contributions: 0.032
+///   }
+/// }
+/// ```
+///
+/// # Errors
+/// Returns error if `k` is 0, if retriever_ids length doesn't match lists, or if input is invalid.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub fn rrf_explain(
+    lists: &JsValue,
+    retriever_ids: &JsValue,
+    k: Option<u32>,
+    top_k: Option<usize>,
+) -> Result<JsValue, JsValue> {
+    use wasm_bindgen::JsCast;
+
+    let array = lists
+        .dyn_ref::<js_sys::Array>()
+        .ok_or_else(|| JsValue::from_str("Expected array of lists"))?;
+
+    if array.length() == 0 {
+        return Ok(js_sys::Array::new().into());
+    }
+
+    let mut lists_vec = Vec::new();
+    for item in array.iter() {
+        let list = js_to_results(&item)?;
+        lists_vec.push(list);
+    }
+
+    let ids_array = retriever_ids
+        .dyn_ref::<js_sys::Array>()
+        .ok_or_else(|| JsValue::from_str("Expected array of retriever IDs"))?;
+
+    if ids_array.length() as usize != lists_vec.len() {
+        return Err(JsValue::from_str(&format!(
+            "retriever_ids length ({}) must match lists length ({})",
+            ids_array.length(),
+            lists_vec.len()
+        )));
+    }
+
+    let mut retriever_ids_vec = Vec::new();
+    for item in ids_array.iter() {
+        let id = item
+            .as_string()
+            .ok_or_else(|| JsValue::from_str("retriever_id must be a string"))?;
+        retriever_ids_vec.push(crate::RetrieverId::new(&id));
+    }
+
+    let k_val = k.unwrap_or(60);
+    if k_val == 0 {
+        return Err(JsValue::from_str(
+            "k must be >= 1 to avoid division by zero",
+        ));
+    }
+
+    let config = RrfConfig { k: k_val, top_k };
+    let explained = crate::rrf_explain(&lists_vec, &retriever_ids_vec, config);
+
+    // Convert to JS objects
+    let result = js_sys::Array::new();
+    for fused_result in explained.iter() {
+        let obj = js_sys::Object::new();
+        js_sys::Reflect::set(&obj, &"id".into(), &JsValue::from_str(&fused_result.id))?;
+        js_sys::Reflect::set(
+            &obj,
+            &"score".into(),
+            &JsValue::from_f64(fused_result.score as f64),
+        )?;
+
+        // Build explanation object
+        let explanation = js_sys::Object::new();
+        let sources = js_sys::Array::new();
+        for source in fused_result.explanation.sources.iter() {
+            let source_obj = js_sys::Object::new();
+            js_sys::Reflect::set(
+                &source_obj,
+                &"retriever_id".into(),
+                &JsValue::from_str(&source.retriever_id),
+            )?;
+            if let Some(rank) = source.original_rank {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"rank".into(),
+                    &JsValue::from_f64(rank as f64),
+                )?;
+            }
+            if let Some(score) = source.original_score {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"score".into(),
+                    &JsValue::from_f64(score as f64),
+                )?;
+            }
+            if let Some(norm_score) = source.normalized_score {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"normalized_score".into(),
+                    &JsValue::from_f64(norm_score as f64),
+                )?;
+            }
+            js_sys::Reflect::set(
+                &source_obj,
+                &"contribution".into(),
+                &JsValue::from_f64(source.contribution as f64),
+            )?;
+            sources.push(&source_obj);
+        }
+        js_sys::Reflect::set(&explanation, &"sources".into(), &sources)?;
+        js_sys::Reflect::set(
+            &explanation,
+            &"consensus_score".into(),
+            &JsValue::from_f64(fused_result.explanation.consensus_score as f64),
+        )?;
+        js_sys::Reflect::set(
+            &explanation,
+            &"total_contributions".into(),
+            &JsValue::from_f64(
+                fused_result
+                    .explanation
+                    .sources
+                    .iter()
+                    .map(|s| s.contribution)
+                    .sum::<f32>() as f64,
+            ),
+        )?;
+        js_sys::Reflect::set(&obj, &"explanation".into(), &explanation)?;
+        result.push(&obj);
+    }
+
+    Ok(result.into())
+}
+
+/// CombSUM fusion with explainability (returns provenance information).
+///
+/// # Arguments
+/// * `lists` - Array of result lists, each as array of `[id, score]` pairs
+/// * `retriever_ids` - Array of retriever identifiers (strings)
+/// * `top_k` - Maximum number of results to return (default: None = all)
+///
+/// # Returns
+/// Array of objects with same structure as `rrf_explain`.
+///
+/// # Errors
+/// Returns error if retriever_ids length doesn't match lists, or if input is invalid.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = combsumExplain)]
+pub fn combsum_explain(
+    lists: &JsValue,
+    retriever_ids: &JsValue,
+    top_k: Option<usize>,
+) -> Result<JsValue, JsValue> {
+    use wasm_bindgen::JsCast;
+
+    let array = lists
+        .dyn_ref::<js_sys::Array>()
+        .ok_or_else(|| JsValue::from_str("Expected array of lists"))?;
+
+    if array.length() == 0 {
+        return Ok(js_sys::Array::new().into());
+    }
+
+    let mut lists_vec = Vec::new();
+    for item in array.iter() {
+        let list = js_to_results(&item)?;
+        lists_vec.push(list);
+    }
+
+    let ids_array = retriever_ids
+        .dyn_ref::<js_sys::Array>()
+        .ok_or_else(|| JsValue::from_str("Expected array of retriever IDs"))?;
+
+    if ids_array.length() as usize != lists_vec.len() {
+        return Err(JsValue::from_str(&format!(
+            "retriever_ids length ({}) must match lists length ({})",
+            ids_array.length(),
+            lists_vec.len()
+        )));
+    }
+
+    let mut retriever_ids_vec = Vec::new();
+    for item in ids_array.iter() {
+        let id = item
+            .as_string()
+            .ok_or_else(|| JsValue::from_str("retriever_id must be a string"))?;
+        retriever_ids_vec.push(crate::RetrieverId::new(&id));
+    }
+
+    let config = crate::FusionConfig { top_k };
+    let explained = crate::combsum_explain(&lists_vec, &retriever_ids_vec, config);
+
+    // Convert to JS objects (same structure as rrf_explain)
+    let result = js_sys::Array::new();
+    for fused_result in explained.iter() {
+        let obj = js_sys::Object::new();
+        js_sys::Reflect::set(&obj, &"id".into(), &JsValue::from_str(&fused_result.id))?;
+        js_sys::Reflect::set(
+            &obj,
+            &"score".into(),
+            &JsValue::from_f64(fused_result.score as f64),
+        )?;
+
+        let explanation = js_sys::Object::new();
+        let sources = js_sys::Array::new();
+        for source in fused_result.explanation.sources.iter() {
+            let source_obj = js_sys::Object::new();
+            js_sys::Reflect::set(
+                &source_obj,
+                &"retriever_id".into(),
+                &JsValue::from_str(&source.retriever_id),
+            )?;
+            if let Some(rank) = source.original_rank {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"rank".into(),
+                    &JsValue::from_f64(rank as f64),
+                )?;
+            }
+            if let Some(score) = source.original_score {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"score".into(),
+                    &JsValue::from_f64(score as f64),
+                )?;
+            }
+            if let Some(norm_score) = source.normalized_score {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"normalized_score".into(),
+                    &JsValue::from_f64(norm_score as f64),
+                )?;
+            }
+            js_sys::Reflect::set(
+                &source_obj,
+                &"contribution".into(),
+                &JsValue::from_f64(source.contribution as f64),
+            )?;
+            sources.push(&source_obj);
+        }
+        js_sys::Reflect::set(&explanation, &"sources".into(), &sources)?;
+        js_sys::Reflect::set(
+            &explanation,
+            &"consensus_score".into(),
+            &JsValue::from_f64(fused_result.explanation.consensus_score as f64),
+        )?;
+        js_sys::Reflect::set(&obj, &"explanation".into(), &explanation)?;
+        result.push(&obj);
+    }
+
+    Ok(result.into())
+}
+
+/// CombMNZ fusion with explainability (returns provenance information).
+///
+/// # Arguments
+/// * `lists` - Array of result lists, each as array of `[id, score]` pairs
+/// * `retriever_ids` - Array of retriever identifiers (strings)
+/// * `top_k` - Maximum number of results to return (default: None = all)
+///
+/// # Returns
+/// Array of objects with same structure as `rrf_explain`.
+///
+/// # Errors
+/// Returns error if retriever_ids length doesn't match lists, or if input is invalid.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = combmnzExplain)]
+pub fn combmnz_explain(
+    lists: &JsValue,
+    retriever_ids: &JsValue,
+    top_k: Option<usize>,
+) -> Result<JsValue, JsValue> {
+    use wasm_bindgen::JsCast;
+
+    let array = lists
+        .dyn_ref::<js_sys::Array>()
+        .ok_or_else(|| JsValue::from_str("Expected array of lists"))?;
+
+    if array.length() == 0 {
+        return Ok(js_sys::Array::new().into());
+    }
+
+    let mut lists_vec = Vec::new();
+    for item in array.iter() {
+        let list = js_to_results(&item)?;
+        lists_vec.push(list);
+    }
+
+    let ids_array = retriever_ids
+        .dyn_ref::<js_sys::Array>()
+        .ok_or_else(|| JsValue::from_str("Expected array of retriever IDs"))?;
+
+    if ids_array.length() as usize != lists_vec.len() {
+        return Err(JsValue::from_str(&format!(
+            "retriever_ids length ({}) must match lists length ({})",
+            ids_array.length(),
+            lists_vec.len()
+        )));
+    }
+
+    let mut retriever_ids_vec = Vec::new();
+    for item in ids_array.iter() {
+        let id = item
+            .as_string()
+            .ok_or_else(|| JsValue::from_str("retriever_id must be a string"))?;
+        retriever_ids_vec.push(crate::RetrieverId::new(&id));
+    }
+
+    let config = crate::FusionConfig { top_k };
+    let explained = crate::combmnz_explain(&lists_vec, &retriever_ids_vec, config);
+
+    // Convert to JS objects (same structure as rrf_explain)
+    let result = js_sys::Array::new();
+    for fused_result in explained.iter() {
+        let obj = js_sys::Object::new();
+        js_sys::Reflect::set(&obj, &"id".into(), &JsValue::from_str(&fused_result.id))?;
+        js_sys::Reflect::set(
+            &obj,
+            &"score".into(),
+            &JsValue::from_f64(fused_result.score as f64),
+        )?;
+
+        let explanation = js_sys::Object::new();
+        let sources = js_sys::Array::new();
+        for source in fused_result.explanation.sources.iter() {
+            let source_obj = js_sys::Object::new();
+            js_sys::Reflect::set(
+                &source_obj,
+                &"retriever_id".into(),
+                &JsValue::from_str(&source.retriever_id),
+            )?;
+            if let Some(rank) = source.original_rank {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"rank".into(),
+                    &JsValue::from_f64(rank as f64),
+                )?;
+            }
+            if let Some(score) = source.original_score {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"score".into(),
+                    &JsValue::from_f64(score as f64),
+                )?;
+            }
+            if let Some(norm_score) = source.normalized_score {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"normalized_score".into(),
+                    &JsValue::from_f64(norm_score as f64),
+                )?;
+            }
+            js_sys::Reflect::set(
+                &source_obj,
+                &"contribution".into(),
+                &JsValue::from_f64(source.contribution as f64),
+            )?;
+            sources.push(&source_obj);
+        }
+        js_sys::Reflect::set(&explanation, &"sources".into(), &sources)?;
+        js_sys::Reflect::set(
+            &explanation,
+            &"consensus_score".into(),
+            &JsValue::from_f64(fused_result.explanation.consensus_score as f64),
+        )?;
+        js_sys::Reflect::set(&obj, &"explanation".into(), &explanation)?;
+        result.push(&obj);
+    }
+
+    Ok(result.into())
+}
+
+/// DBSF fusion with explainability (returns provenance information).
+///
+/// # Arguments
+/// * `lists` - Array of result lists, each as array of `[id, score]` pairs
+/// * `retriever_ids` - Array of retriever identifiers (strings)
+/// * `top_k` - Maximum number of results to return (default: None = all)
+///
+/// # Returns
+/// Array of objects with same structure as `rrf_explain`.
+///
+/// # Errors
+/// Returns error if retriever_ids length doesn't match lists, or if input is invalid.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = dbsfExplain)]
+pub fn dbsf_explain(
+    lists: &JsValue,
+    retriever_ids: &JsValue,
+    top_k: Option<usize>,
+) -> Result<JsValue, JsValue> {
+    use wasm_bindgen::JsCast;
+
+    let array = lists
+        .dyn_ref::<js_sys::Array>()
+        .ok_or_else(|| JsValue::from_str("Expected array of lists"))?;
+
+    if array.length() == 0 {
+        return Ok(js_sys::Array::new().into());
+    }
+
+    let mut lists_vec = Vec::new();
+    for item in array.iter() {
+        let list = js_to_results(&item)?;
+        lists_vec.push(list);
+    }
+
+    let ids_array = retriever_ids
+        .dyn_ref::<js_sys::Array>()
+        .ok_or_else(|| JsValue::from_str("Expected array of retriever IDs"))?;
+
+    if ids_array.length() as usize != lists_vec.len() {
+        return Err(JsValue::from_str(&format!(
+            "retriever_ids length ({}) must match lists length ({})",
+            ids_array.length(),
+            lists_vec.len()
+        )));
+    }
+
+    let mut retriever_ids_vec = Vec::new();
+    for item in ids_array.iter() {
+        let id = item
+            .as_string()
+            .ok_or_else(|| JsValue::from_str("retriever_id must be a string"))?;
+        retriever_ids_vec.push(crate::RetrieverId::new(&id));
+    }
+
+    let config = crate::FusionConfig { top_k };
+    let explained = crate::dbsf_explain(&lists_vec, &retriever_ids_vec, config);
+
+    // Convert to JS objects (same structure as rrf_explain)
+    let result = js_sys::Array::new();
+    for fused_result in explained.iter() {
+        let obj = js_sys::Object::new();
+        js_sys::Reflect::set(&obj, &"id".into(), &JsValue::from_str(&fused_result.id))?;
+        js_sys::Reflect::set(
+            &obj,
+            &"score".into(),
+            &JsValue::from_f64(fused_result.score as f64),
+        )?;
+
+        let explanation = js_sys::Object::new();
+        let sources = js_sys::Array::new();
+        for source in fused_result.explanation.sources.iter() {
+            let source_obj = js_sys::Object::new();
+            js_sys::Reflect::set(
+                &source_obj,
+                &"retriever_id".into(),
+                &JsValue::from_str(&source.retriever_id),
+            )?;
+            if let Some(rank) = source.original_rank {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"rank".into(),
+                    &JsValue::from_f64(rank as f64),
+                )?;
+            }
+            if let Some(score) = source.original_score {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"score".into(),
+                    &JsValue::from_f64(score as f64),
+                )?;
+            }
+            if let Some(norm_score) = source.normalized_score {
+                js_sys::Reflect::set(
+                    &source_obj,
+                    &"normalized_score".into(),
+                    &JsValue::from_f64(norm_score as f64),
+                )?;
+            }
+            js_sys::Reflect::set(
+                &source_obj,
+                &"contribution".into(),
+                &JsValue::from_f64(source.contribution as f64),
+            )?;
+            sources.push(&source_obj);
+        }
+        js_sys::Reflect::set(&explanation, &"sources".into(), &sources)?;
+        js_sys::Reflect::set(
+            &explanation,
+            &"consensus_score".into(),
+            &JsValue::from_f64(fused_result.explanation.consensus_score as f64),
+        )?;
+        js_sys::Reflect::set(&obj, &"explanation".into(), &explanation)?;
+        result.push(&obj);
+    }
+
+    Ok(result.into())
+}
+
+/// Validate fusion results.
+///
+/// # Arguments
+/// * `results` - Array of `[id, score]` pairs
+/// * `strict` - If true, treat warnings as errors
+/// * `expected_top_k` - Expected number of results (None = no check)
+///
+/// # Returns
+/// Validation result object:
+/// ```javascript
+/// {
+///   is_valid: true,
+///   errors: [],
+///   warnings: [],
+///   stats: {
+///     total_results: 10,
+///     has_duplicates: false,
+///     is_sorted: true,
+///     has_finite_scores: true,
+///     has_non_negative_scores: true
+///   }
+/// }
+/// ```
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub fn validate(
+    results: &JsValue,
+    strict: bool,
+    expected_top_k: Option<usize>,
+) -> Result<JsValue, JsValue> {
+    let results_vec = js_to_results(results)?;
+    let validation = crate::validate::validate(&results_vec, strict, expected_top_k);
+
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &obj,
+        &"is_valid".into(),
+        &JsValue::from_bool(validation.is_valid),
+    )?;
+
+    let errors = js_sys::Array::new();
+    for error in validation.errors.iter() {
+        errors.push(&JsValue::from_str(error));
+    }
+    js_sys::Reflect::set(&obj, &"errors".into(), &errors)?;
+
+    let warnings = js_sys::Array::new();
+    for warning in validation.warnings.iter() {
+        warnings.push(&JsValue::from_str(warning));
+    }
+    js_sys::Reflect::set(&obj, &"warnings".into(), &warnings)?;
+
+    // Add basic stats computed from results
+    let stats = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &stats,
+        &"total_results".into(),
+        &JsValue::from_f64(results_vec.len() as f64),
+    )?;
+    
+    // Check for duplicates
+    let mut seen = std::collections::HashSet::new();
+    let mut has_duplicates = false;
+    for (id, _) in results_vec.iter() {
+        if seen.contains(id) {
+            has_duplicates = true;
+            break;
+        }
+        seen.insert(id);
+    }
+    js_sys::Reflect::set(
+        &stats,
+        &"has_duplicates".into(),
+        &JsValue::from_bool(has_duplicates),
+    )?;
+    
+    // Check if sorted
+    let mut is_sorted = true;
+    for window in results_vec.windows(2) {
+        if window[0].1 < window[1].1 {
+            is_sorted = false;
+            break;
+        }
+    }
+    js_sys::Reflect::set(
+        &stats,
+        &"is_sorted".into(),
+        &JsValue::from_bool(is_sorted),
+    )?;
+    
+    // Check for finite scores
+    let has_finite_scores = results_vec.iter().all(|(_, score)| score.is_finite());
+    js_sys::Reflect::set(
+        &stats,
+        &"has_finite_scores".into(),
+        &JsValue::from_bool(has_finite_scores),
+    )?;
+    
+    // Check for non-negative scores
+    let has_non_negative_scores = results_vec.iter().all(|(_, score)| *score >= 0.0);
+    js_sys::Reflect::set(
+        &stats,
+        &"has_non_negative_scores".into(),
+        &JsValue::from_bool(has_non_negative_scores),
+    )?;
+    
+    js_sys::Reflect::set(&obj, &"stats".into(), &stats)?;
+
+    Ok(obj.into())
+}
+
+/// Validate that fusion results are sorted by score (descending).
+///
+/// # Arguments
+/// * `results` - Array of `[id, score]` pairs
+///
+/// # Returns
+/// Validation result object with `is_valid` boolean and `errors` array.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = validateSorted)]
+pub fn validate_sorted(results: &JsValue) -> Result<JsValue, JsValue> {
+    let results_vec = js_to_results(results)?;
+    let validation = crate::validate::validate_sorted(&results_vec);
+
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &obj,
+        &"is_valid".into(),
+        &JsValue::from_bool(validation.is_valid),
+    )?;
+
+    let errors = js_sys::Array::new();
+    for error in validation.errors.iter() {
+        errors.push(&JsValue::from_str(error));
+    }
+    js_sys::Reflect::set(&obj, &"errors".into(), &errors)?;
+
+    Ok(obj.into())
+}
+
+/// Validate that fusion results contain no duplicate document IDs.
+///
+/// # Arguments
+/// * `results` - Array of `[id, score]` pairs
+///
+/// # Returns
+/// Validation result object with `is_valid` boolean and `errors` array.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = validateNoDuplicates)]
+pub fn validate_no_duplicates(results: &JsValue) -> Result<JsValue, JsValue> {
+    let results_vec = js_to_results(results)?;
+    let validation = crate::validate::validate_no_duplicates(&results_vec);
+
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &obj,
+        &"is_valid".into(),
+        &JsValue::from_bool(validation.is_valid),
+    )?;
+
+    let errors = js_sys::Array::new();
+    for error in validation.errors.iter() {
+        errors.push(&JsValue::from_str(error));
+    }
+    js_sys::Reflect::set(&obj, &"errors".into(), &errors)?;
+
+    Ok(obj.into())
+}
+
+/// Validate that all scores are finite (not NaN or Infinity).
+///
+/// # Arguments
+/// * `results` - Array of `[id, score]` pairs
+///
+/// # Returns
+/// Validation result object with `is_valid` boolean and `errors` array.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = validateFiniteScores)]
+pub fn validate_finite_scores(results: &JsValue) -> Result<JsValue, JsValue> {
+    let results_vec = js_to_results(results)?;
+    let validation = crate::validate::validate_finite_scores(&results_vec);
+
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &obj,
+        &"is_valid".into(),
+        &JsValue::from_bool(validation.is_valid),
+    )?;
+
+    let errors = js_sys::Array::new();
+    for error in validation.errors.iter() {
+        errors.push(&JsValue::from_str(error));
+    }
+    js_sys::Reflect::set(&obj, &"errors".into(), &errors)?;
+
+    Ok(obj.into())
+}
+
+/// Validate that all scores are non-negative (warning only).
+///
+/// # Arguments
+/// * `results` - Array of `[id, score]` pairs
+///
+/// # Returns
+/// Validation result object with `is_valid` boolean and `warnings` array.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = validateNonNegativeScores)]
+pub fn validate_non_negative_scores(results: &JsValue) -> Result<JsValue, JsValue> {
+    let results_vec = js_to_results(results)?;
+    let validation = crate::validate::validate_non_negative_scores(&results_vec);
+
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &obj,
+        &"is_valid".into(),
+        &JsValue::from_bool(validation.is_valid),
+    )?;
+
+    let warnings = js_sys::Array::new();
+    for warning in validation.warnings.iter() {
+        warnings.push(&JsValue::from_str(warning));
+    }
+    js_sys::Reflect::set(&obj, &"warnings".into(), &warnings)?;
+
+    Ok(obj.into())
+}
+
+/// Validate that results are within expected bounds (e.g., top_k).
+///
+/// # Arguments
+/// * `results` - Array of `[id, score]` pairs
+/// * `max_results` - Maximum expected number of results (None = no check)
+///
+/// # Returns
+/// Validation result object with `is_valid` boolean and `warnings` array.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen(js_name = validateBounds)]
+pub fn validate_bounds(
+    results: &JsValue,
+    max_results: Option<usize>,
+) -> Result<JsValue, JsValue> {
+    let results_vec = js_to_results(results)?;
+    let validation = crate::validate::validate_bounds(&results_vec, max_results);
+
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &obj,
+        &"is_valid".into(),
+        &JsValue::from_bool(validation.is_valid),
+    )?;
+
+    let warnings = js_sys::Array::new();
+    for warning in validation.warnings.iter() {
+        warnings.push(&JsValue::from_str(warning));
+    }
+    js_sys::Reflect::set(&obj, &"warnings".into(), &warnings)?;
+
+    Ok(obj.into())
 }

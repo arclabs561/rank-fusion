@@ -32,6 +32,10 @@ proptest = { workspace = true }
 name = "fusion"
 harness = false
 
+[[bench]]
+name = "comprehensive"
+harness = false
+
 # Optimize WASM builds for smaller binary size
 # These settings reduce WASM binary size by 30-40% compared to defaults
 [profile.release]

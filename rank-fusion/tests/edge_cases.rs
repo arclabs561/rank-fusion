@@ -31,25 +31,28 @@ fn test_single_item_lists() {
 
 #[test]
 fn test_all_identical_scores() {
-    // RRF should still work (rank-based, not score-based)
+    // RRF is rank-based, so even with identical scores, rank order matters
+    // list1: doc1@rank0, doc2@rank1, doc3@rank2
+    // list2: doc2@rank0, doc3@rank1, doc1@rank2
+    // doc1: 1/(60+0) + 1/(60+2) = 1/60 + 1/62 ≈ 0.0328
+    // doc2: 1/(60+1) + 1/(60+0) = 1/61 + 1/60 ≈ 0.0330
+    // doc3: 1/(60+2) + 1/(60+1) = 1/62 + 1/61 ≈ 0.0326
+    // So doc2 should rank highest (appears at rank 0 in list2)
     let list1 = vec![("doc1", 0.5), ("doc2", 0.5), ("doc3", 0.5)];
     let list2 = vec![("doc2", 0.5), ("doc3", 0.5), ("doc1", 0.5)];
     
     let fused = rrf(&list1, &list2);
-    // All docs appear in both lists, so all should have same score
+    // All docs appear in both lists, but ranks differ
     assert_eq!(fused.len(), 3);
-    assert!((fused[0].1 - fused[1].1).abs() < 1e-6);
-    assert!((fused[1].1 - fused[2].1).abs() < 1e-6);
+    // doc2 should rank highest (rank 0 in list2, rank 1 in list1)
+    assert_eq!(fused[0].0, "doc2");
 }
 
 #[test]
-fn test_k_zero_returns_empty() {
-    // k=0 would cause division by zero, should return empty
-    let list1 = vec![("doc1", 0.9), ("doc2", 0.5)];
-    let list2 = vec![("doc2", 0.8), ("doc3", 0.3)];
-    
-    let fused = rrf_with_config(&list1, &list2, RrfConfig::new(0));
-    assert!(fused.is_empty());
+#[should_panic(expected = "k must be >= 1")]
+fn test_k_zero_panics() {
+    // k=0 would cause division by zero, RrfConfig::new(0) should panic
+    let _config = RrfConfig::new(0); // This should panic
 }
 
 #[test]

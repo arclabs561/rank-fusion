@@ -110,13 +110,26 @@ Quick reference guides for choosing algorithms, parameters, and configurations.
 │   overlap count │         │ • Faster                 │
 │ • Rewards       │         │ • Less sensitive to      │
 │   consensus     │         │   normalization errors   │
-│ • Can amplify   │         │                          │
+│ • Can amplify   │         │ • Default choice         │
 │   normalization │         │                          │
 │   errors        │         │                          │
 └──────────────────┘         └──────────────────────────┘
 ```
 
-**Historical Note**: TREC experiments (2001-2005) showed CombSUM consistently outperformed CombMNZ, but CombMNZ sometimes exceeded individual systems when normalization was correct. The choice depends on normalization reliability.
+**Why CombSUM is the Default:**
+
+1. **Empirical Evidence**: TREC experiments (2001-2005) consistently showed CombSUM outperforming CombMNZ across diverse datasets. CombMNZ only exceeded individual systems when normalization was perfect—a rare condition in practice.
+
+2. **Robustness**: CombSUM is less sensitive to normalization errors. CombMNZ multiplies by overlap count, which amplifies any normalization mistakes. If one list has slightly wrong normalization, CombMNZ makes it worse.
+
+3. **Simplicity**: CombSUM is faster (no overlap counting) and easier to reason about. The sum of normalized scores is intuitive.
+
+4. **When CombMNZ Helps**: Only when:
+   - Normalization is highly reliable (same embedding model, same preprocessing)
+   - Overlap is a strong signal (e.g., multiple independent retrievers agree)
+   - You've validated that CombMNZ outperforms CombSUM on your data
+
+**Historical Note**: The CombMNZ formula (CombSUM × overlap_count) was proposed to reward documents appearing in multiple lists. However, empirical studies found this amplification often hurts more than helps, especially when score distributions differ slightly between lists. Modern practice favors CombSUM unless you have strong evidence that overlap is a reliable relevance signal.
 
 ## Normalization Strategy
 

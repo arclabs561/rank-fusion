@@ -34,10 +34,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-#[cfg(feature = "wasm")]
-#[doc(hidden)]
-pub mod wasm;
-
 /// Validation utilities for fusion results.
 pub mod validate;
 
