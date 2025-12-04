@@ -34,6 +34,16 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+#[cfg(feature = "wasm")]
+#[doc(hidden)]
+pub mod wasm;
+
+/// Validation utilities for fusion results.
+pub mod validate;
+
+#[cfg(test)]
+mod proptests;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Error Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,11 +262,13 @@ impl FusionConfig {
 /// ```
 pub mod prelude {
     pub use crate::{
-        borda, combanz, combmax, combmed, combmnz, combsum, dbsf, isr, isr_with_config, rrf,
-        rrf_with_config, weighted,
+        additive_multi_task, additive_multi_task_multi, additive_multi_task_with_config, borda,
+        combanz, combmax, combmed, combmnz, combsum, dbsf, isr, isr_with_config, rrf,
+        rrf_with_config, standardized, standardized_multi, standardized_with_config, weighted,
     };
     pub use crate::{
-        FusionConfig, FusionError, FusionMethod, Normalization, Result, RrfConfig, WeightedConfig,
+        AdditiveMultiTaskConfig, FusionConfig, FusionError, FusionMethod, Normalization, Result,
+        RrfConfig, StandardizedConfig, WeightedConfig,
     };
 }
 
@@ -272,12 +284,27 @@ pub mod explain {
     };
 }
 
+#[cfg(feature = "wasm")]
+#[doc(hidden)]
+pub mod wasm;
+
 /// Strategy module for runtime fusion method selection.
 ///
 /// Enables dynamic selection of fusion methods without trait objects.
 pub mod strategy {
     pub use crate::FusionStrategy;
 }
+
+/// Validation module for fusion results.
+///
+/// Provides utilities to validate fusion results, ensuring they meet expected
+/// properties (sorted, no duplicates, finite scores, etc.).
+///
+/// Re-exports all validation functions from the internal validate module.
+pub use validate::{
+    validate, validate_bounds, validate_finite_scores, validate_no_duplicates,
+    validate_non_negative_scores, validate_sorted, ValidationResult,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Unified Fusion Method
@@ -330,6 +357,28 @@ pub enum FusionMethod {
     },
     /// Distribution-Based Score Fusion (z-score normalization).
     Dbsf,
+    /// Standardization-based fusion (ERANK-style).
+    ///
+    /// Uses z-score normalization (standardization) instead of min-max normalization,
+    /// then applies additive fusion. More robust to outliers and different score distributions.
+    /// Based on ERANK (arXiv:2509.00520) which shows 2-5% NDCG improvement over CombSUM
+    /// when score distributions differ significantly.
+    Standardized {
+        /// Clip z-scores to this range (default: [-3.0, 3.0]).
+        clip_range: (f32, f32),
+    },
+    /// Additive multi-task fusion (ResFlow-style).
+    ///
+    /// Additive fusion of multi-task scores: `α·score_a + β·score_b`.
+    /// ResFlow (arXiv:2411.09705) shows additive outperforms multiplicative for e-commerce.
+    AdditiveMultiTask {
+        /// Weight for first task.
+        weight_a: f32,
+        /// Weight for second task.
+        weight_b: f32,
+        /// Normalization method (default: ZScore for robustness).
+        normalization: Normalization,
+    },
 }
 
 impl Default for FusionMethod {
@@ -373,6 +422,50 @@ impl FusionMethod {
         }
     }
 
+    /// Create standardized fusion method (ERANK-style).
+    ///
+    /// Uses z-score normalization (standardization) with clipping to prevent outliers.
+    /// More robust than min-max when score distributions differ significantly.
+    #[must_use]
+    pub const fn standardized(clip_range: (f32, f32)) -> Self {
+        Self::Standardized { clip_range }
+    }
+
+    /// Create standardized fusion method with default clipping [-3.0, 3.0].
+    #[must_use]
+    pub const fn standardized_default() -> Self {
+        Self::Standardized {
+            clip_range: (-3.0, 3.0),
+        }
+    }
+
+    /// Create additive multi-task fusion method (ResFlow-style).
+    ///
+    /// Additive fusion outperforms multiplicative for e-commerce ranking.
+    /// ResFlow's optimal formula: `CTR + CTCVR × 20`.
+    #[must_use]
+    pub const fn additive_multi_task(weight_a: f32, weight_b: f32) -> Self {
+        Self::AdditiveMultiTask {
+            weight_a,
+            weight_b,
+            normalization: Normalization::ZScore,
+        }
+    }
+
+    /// Create additive multi-task fusion with custom normalization.
+    #[must_use]
+    pub fn additive_multi_task_with_norm(
+        weight_a: f32,
+        weight_b: f32,
+        normalization: Normalization,
+    ) -> Self {
+        Self::AdditiveMultiTask {
+            weight_a,
+            weight_b,
+            normalization,
+        }
+    }
+
     /// Fuse two ranked lists using this method.
     ///
     /// # Arguments
@@ -410,6 +503,19 @@ impl FusionMethod {
                 WeightedConfig::new(*weight_a, *weight_b).with_normalize(*normalize),
             ),
             Self::Dbsf => crate::dbsf(a, b),
+            Self::Standardized { clip_range } => {
+                crate::standardized_with_config(a, b, StandardizedConfig::new(*clip_range))
+            }
+            Self::AdditiveMultiTask {
+                weight_a,
+                weight_b,
+                normalization,
+            } => crate::additive_multi_task_with_config(
+                a,
+                b,
+                AdditiveMultiTaskConfig::new((*weight_a, *weight_b))
+                    .with_normalization(*normalization),
+            ),
         }
     }
 
@@ -443,6 +549,30 @@ impl FusionMethod {
                 }
             }
             Self::Dbsf => crate::dbsf_multi(lists, FusionConfig::default()),
+            Self::Standardized { clip_range: _ } => {
+                crate::standardized_multi(lists, StandardizedConfig::default())
+            }
+            Self::AdditiveMultiTask {
+                weight_a,
+                weight_b,
+                normalization,
+            } => {
+                // For multi-list, use equal weights (users should use additive_multi_task_multi directly)
+                if lists.len() == 2 {
+                    self.fuse(lists[0].as_ref(), lists[1].as_ref())
+                } else {
+                    // For 3+ lists, convert to weighted lists format
+                    let weighted_lists: Vec<_> = lists
+                        .iter()
+                        .map(|l| (l.as_ref(), 1.0 / lists.len() as f32))
+                        .collect();
+                    crate::additive_multi_task_multi(
+                        &weighted_lists,
+                        AdditiveMultiTaskConfig::new((*weight_a, *weight_b))
+                            .with_normalization(*normalization),
+                    )
+                }
+            }
         }
     }
 }
@@ -521,6 +651,10 @@ pub fn rrf_with_config<I: Clone + Eq + Hash>(
     results_b: &[(I, f32)],
     config: RrfConfig,
 ) -> Vec<(I, f32)> {
+    // Validate k >= 1 to avoid division by zero (k=0 would cause 1/0 for rank 0)
+    if config.k == 0 {
+        return Vec::new();
+    }
     let k = config.k as f32;
     // Pre-allocate capacity to avoid reallocations during insertion
     let estimated_size = results_a.len() + results_b.len();
@@ -604,6 +738,10 @@ where
     L: AsRef<[(I, f32)]>,
 {
     if lists.is_empty() {
+        return Vec::new();
+    }
+    // Validate k >= 1 to avoid division by zero
+    if config.k == 0 {
         return Vec::new();
     }
     let k = config.k as f32;
@@ -746,6 +884,10 @@ pub fn isr_with_config<I: Clone + Eq + Hash>(
     results_b: &[(I, f32)],
     config: RrfConfig,
 ) -> Vec<(I, f32)> {
+    // Validate k >= 1 to avoid division by zero (k=0 would cause 1/0 for rank 0)
+    if config.k == 0 {
+        return Vec::new();
+    }
     let k = config.k as f32;
     let estimated_size = results_a.len() + results_b.len();
     let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
@@ -772,6 +914,10 @@ pub fn isr_with_config<I: Clone + Eq + Hash>(
 }
 
 /// ISR for 3+ result lists.
+///
+/// # Invalid Configuration
+///
+/// If `config.k == 0`, returns an empty result to avoid division by zero.
 #[must_use]
 #[allow(clippy::cast_precision_loss)]
 pub fn isr_multi<I, L>(lists: &[L], config: RrfConfig) -> Vec<(I, f32)>
@@ -780,6 +926,10 @@ where
     L: AsRef<[(I, f32)]>,
 {
     if lists.is_empty() {
+        return Vec::new();
+    }
+    // Validate k >= 1 to avoid division by zero
+    if config.k == 0 {
         return Vec::new();
     }
     let k = config.k as f32;
@@ -1211,6 +1361,303 @@ fn zscore_params<I>(results: &[(I, f32)]) -> (f32, f32) {
     let std = variance.sqrt();
 
     (mean, std)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Standardization-Based Fusion (ERANK-style)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Configuration for standardization-based fusion.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct StandardizedConfig {
+    /// Clip z-scores to this range (default: [-3.0, 3.0]).
+    pub clip_range: (f32, f32),
+    /// Maximum results to return (None = all).
+    pub top_k: Option<usize>,
+}
+
+impl Default for StandardizedConfig {
+    fn default() -> Self {
+        Self {
+            clip_range: (-3.0, 3.0),
+            top_k: None,
+        }
+    }
+}
+
+impl StandardizedConfig {
+    /// Create new config with custom clipping range.
+    #[must_use]
+    pub const fn new(clip_range: (f32, f32)) -> Self {
+        Self {
+            clip_range,
+            top_k: None,
+        }
+    }
+
+    /// Limit output to `top_k` results.
+    #[must_use]
+    pub const fn with_top_k(mut self, top_k: usize) -> Self {
+        self.top_k = Some(top_k);
+        self
+    }
+}
+
+/// Standardization-based fusion (ERANK-style).
+///
+/// Uses z-score normalization (standardization) instead of min-max normalization,
+/// then applies additive fusion. More robust to outliers and different score distributions.
+///
+/// Based on ERANK (arXiv:2509.00520) which shows 2-5% NDCG improvement over CombSUM
+/// when score distributions differ significantly.
+///
+/// # Algorithm
+///
+/// For each list:
+/// 1. Compute mean (μ) and standard deviation (σ)
+/// 2. Normalize: `z = (score - μ) / σ`, clipped to `clip_range`
+/// 3. Sum normalized scores across lists
+///
+/// # Differences from DBSF
+///
+/// - DBSF uses fixed [-3, 3] clipping
+/// - Standardized allows configurable clipping range
+/// - Both use the same z-score approach, but standardized is more flexible
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::standardized;
+///
+/// let bm25 = vec![("d1", 15.0), ("d2", 12.0), ("d3", 8.0)];
+/// let dense = vec![("d2", 0.9), ("d3", 0.7), ("d4", 0.5)];
+/// let fused = standardized(&bm25, &dense);
+/// ```
+#[must_use]
+pub fn standardized<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+) -> Vec<(I, f32)> {
+    standardized_with_config(results_a, results_b, StandardizedConfig::default())
+}
+
+/// Standardized fusion with configuration.
+#[must_use]
+pub fn standardized_with_config<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+    config: StandardizedConfig,
+) -> Vec<(I, f32)> {
+    standardized_multi(&[results_a, results_b], config)
+}
+
+/// Standardized fusion for 3+ result lists.
+///
+/// # Empty Lists
+///
+/// If `lists` is empty, returns an empty result. Empty lists within the slice
+/// contribute zero scores (documents not appearing in those lists receive
+/// no z-score contribution from them).
+///
+/// # Degenerate Cases
+///
+/// If all scores in a list are equal (zero variance), that list contributes
+/// z-score=0.0 for all documents, which is mathematically correct but
+/// effectively ignores that list's contribution.
+#[must_use]
+pub fn standardized_multi<I, L>(lists: &[L], config: StandardizedConfig) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if lists.is_empty() {
+        return Vec::new();
+    }
+    let estimated_size: usize = lists.iter().map(|l| l.as_ref().len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
+    let (clip_min, clip_max) = config.clip_range;
+
+    for list in lists {
+        let items = list.as_ref();
+        let (mean, std) = zscore_params(items);
+
+        for (id, s) in items {
+            // Z-score normalize and clip to configurable range
+            let z = if std > SCORE_RANGE_EPSILON {
+                ((s - mean) / std).clamp(clip_min, clip_max)
+            } else {
+                0.0 // All scores equal
+            };
+            if let Some(score) = scores.get_mut(id) {
+                *score += z;
+            } else {
+                scores.insert(id.clone(), z);
+            }
+        }
+    }
+
+    finalize(scores, config.top_k)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Additive Multi-Task Fusion (ResFlow-style)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Configuration for additive multi-task fusion.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AdditiveMultiTaskConfig {
+    /// Weights for each task: (weight_a, weight_b).
+    pub weights: (f32, f32),
+    /// Normalization method (default: ZScore for robustness).
+    pub normalization: Normalization,
+    /// Maximum results to return (None = all).
+    pub top_k: Option<usize>,
+}
+
+impl Default for AdditiveMultiTaskConfig {
+    fn default() -> Self {
+        Self {
+            weights: (1.0, 1.0),
+            normalization: Normalization::ZScore,
+            top_k: None,
+        }
+    }
+}
+
+impl AdditiveMultiTaskConfig {
+    /// Create new config with custom weights.
+    ///
+    /// ResFlow's optimal formula for e-commerce: `CTR + CTCVR × 20`.
+    /// This would be `AdditiveMultiTaskConfig::new((1.0, 20.0))`.
+    #[must_use]
+    pub const fn new(weights: (f32, f32)) -> Self {
+        Self {
+            weights,
+            normalization: Normalization::ZScore,
+            top_k: None,
+        }
+    }
+
+    /// Set normalization method.
+    #[must_use]
+    pub const fn with_normalization(mut self, normalization: Normalization) -> Self {
+        self.normalization = normalization;
+        self
+    }
+
+    /// Limit output to `top_k` results.
+    #[must_use]
+    pub const fn with_top_k(mut self, top_k: usize) -> Self {
+        self.top_k = Some(top_k);
+        self
+    }
+}
+
+/// Additive multi-task fusion (ResFlow-style).
+///
+/// Additive fusion of multi-task scores: `α·score_a + β·score_b`.
+///
+/// ResFlow (arXiv:2411.09705) shows additive outperforms multiplicative for e-commerce
+/// ranking tasks. The optimal formula is typically `CTR + CTCVR × 20`, where CTR and
+/// CTCVR are normalized scores from different tasks.
+///
+/// # Algorithm
+///
+/// 1. Normalize each list using the specified normalization method
+/// 2. Compute weighted sum: `α·norm_a + β·norm_b`
+/// 3. Sort by combined score (descending)
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::{additive_multi_task, AdditiveMultiTaskConfig};
+///
+/// let ctr_scores = vec![("item1", 0.05), ("item2", 0.03), ("item3", 0.01)];
+/// let ctcvr_scores = vec![("item1", 0.02), ("item2", 0.01), ("item3", 0.005)];
+///
+/// // ResFlow optimal: CTR + CTCVR × 20
+/// let config = AdditiveMultiTaskConfig::new((1.0, 20.0));
+/// let fused = additive_multi_task(&ctr_scores, &ctcvr_scores, config);
+/// ```
+#[must_use]
+pub fn additive_multi_task<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+    config: AdditiveMultiTaskConfig,
+) -> Vec<(I, f32)> {
+    additive_multi_task_with_config(results_a, results_b, config)
+}
+
+/// Additive multi-task fusion with configuration.
+#[must_use]
+pub fn additive_multi_task_with_config<I: Clone + Eq + Hash>(
+    results_a: &[(I, f32)],
+    results_b: &[(I, f32)],
+    config: AdditiveMultiTaskConfig,
+) -> Vec<(I, f32)> {
+    let weighted_lists = vec![(results_a, config.weights.0), (results_b, config.weights.1)];
+    additive_multi_task_multi(&weighted_lists, config)
+}
+
+/// Additive multi-task fusion for 3+ weighted lists.
+///
+/// # Arguments
+///
+/// * `weighted_lists` - Slice of (list, weight) pairs. Each list is normalized independently,
+///   then combined using weighted sum.
+///
+/// # Example
+///
+/// ```rust
+/// use rank_fusion::{additive_multi_task_multi, AdditiveMultiTaskConfig};
+///
+/// let task1 = vec![("d1", 0.9), ("d2", 0.7)];
+/// let task2 = vec![("d1", 0.8), ("d2", 0.6)];
+/// let task3 = vec![("d1", 0.5), ("d2", 0.4)];
+///
+/// let weighted = vec![
+///     (&task1[..], 1.0),
+///     (&task2[..], 2.0),
+///     (&task3[..], 0.5),
+/// ];
+///
+/// let config = AdditiveMultiTaskConfig::default();
+/// let fused = additive_multi_task_multi(&weighted, config);
+/// ```
+#[must_use]
+pub fn additive_multi_task_multi<I, L>(
+    weighted_lists: &[(L, f32)],
+    config: AdditiveMultiTaskConfig,
+) -> Vec<(I, f32)>
+where
+    I: Clone + Eq + Hash,
+    L: AsRef<[(I, f32)]>,
+{
+    if weighted_lists.is_empty() {
+        return Vec::new();
+    }
+
+    // Normalize each list independently
+    let normalized: Vec<_> = weighted_lists
+        .iter()
+        .map(|(list, _)| normalize_scores(list.as_ref(), config.normalization))
+        .collect();
+
+    // Compute weighted sum
+    let estimated_size: usize = normalized.iter().map(|n| n.len()).sum();
+    let mut scores: HashMap<I, f32> = HashMap::with_capacity(estimated_size);
+
+    for (normalized_list, (_, weight)) in normalized.iter().zip(weighted_lists.iter()) {
+        for (id, norm_score) in normalized_list {
+            if let Some(score) = scores.get_mut(id) {
+                *score += weight * norm_score;
+            } else {
+                scores.insert(id.clone(), weight * norm_score);
+            }
+        }
+    }
+
+    finalize(scores, config.top_k)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3333,923 +3780,4 @@ mod tests {
 // ─────────────────────────────────────────────────────────────────────────────
 // Property Tests
 // ─────────────────────────────────────────────────────────────────────────────
-
-#[cfg(test)]
-mod proptests {
-    use super::*;
-    use proptest::prelude::*;
-
-    fn arb_results(max_len: usize) -> impl Strategy<Value = Vec<(u32, f32)>> {
-        proptest::collection::vec((0u32..100, 0.0f32..1.0), 0..max_len)
-    }
-
-    #[test]
-    fn rrf_multi_empty_lists() {
-        let empty: Vec<Vec<(u32, f32)>> = vec![];
-        let result = rrf_multi(&empty, RrfConfig::default());
-        assert!(result.is_empty());
-    }
-
-    proptest! {
-        #[test]
-        fn rrf_output_bounded(a in arb_results(50), b in arb_results(50)) {
-            let result = rrf(&a, &b);
-            prop_assert!(result.len() <= a.len() + b.len());
-        }
-
-        #[test]
-        fn rrf_scores_positive(a in arb_results(50), b in arb_results(50)) {
-            let result = rrf(&a, &b);
-            for (_, score) in &result {
-                prop_assert!(*score > 0.0);
-            }
-        }
-
-        #[test]
-        fn rrf_commutative(a in arb_results(20), b in arb_results(20)) {
-            let ab = rrf(&a, &b);
-            let ba = rrf(&b, &a);
-
-            prop_assert_eq!(ab.len(), ba.len());
-
-            let ab_map: HashMap<_, _> = ab.into_iter().collect();
-            let ba_map: HashMap<_, _> = ba.into_iter().collect();
-
-            for (id, score_ab) in &ab_map {
-                let score_ba = ba_map.get(id).expect("same keys");
-                prop_assert!((score_ab - score_ba).abs() < 1e-6);
-            }
-        }
-
-        #[test]
-        fn rrf_sorted_descending(a in arb_results(50), b in arb_results(50)) {
-            let result = rrf(&a, &b);
-            for window in result.windows(2) {
-                prop_assert!(window[0].1 >= window[1].1);
-            }
-        }
-
-        #[test]
-        fn rrf_top_k_respected(a in arb_results(50), b in arb_results(50), k in 1usize..20) {
-            let result = rrf_with_config(&a, &b, RrfConfig::default().with_top_k(k));
-            prop_assert!(result.len() <= k);
-        }
-
-        #[test]
-        fn borda_commutative(a in arb_results(20), b in arb_results(20)) {
-            let ab = borda(&a, &b);
-            let ba = borda(&b, &a);
-
-            let ab_map: HashMap<_, _> = ab.into_iter().collect();
-            let ba_map: HashMap<_, _> = ba.into_iter().collect();
-            prop_assert_eq!(ab_map, ba_map);
-        }
-
-        #[test]
-        fn combsum_commutative(a in arb_results(20), b in arb_results(20)) {
-            let ab = combsum(&a, &b);
-            let ba = combsum(&b, &a);
-
-            let ab_map: HashMap<_, _> = ab.into_iter().collect();
-            let ba_map: HashMap<_, _> = ba.into_iter().collect();
-
-            prop_assert_eq!(ab_map.len(), ba_map.len());
-            for (id, score_ab) in &ab_map {
-                let score_ba = ba_map.get(id).unwrap();
-                prop_assert!((score_ab - score_ba).abs() < 1e-5);
-            }
-        }
-
-        /// CombMNZ should be commutative (argument order doesn't change scores)
-        #[test]
-        fn combmnz_commutative(a in arb_results(20), b in arb_results(20)) {
-            let ab = combmnz(&a, &b);
-            let ba = combmnz(&b, &a);
-
-            let ab_map: HashMap<_, _> = ab.into_iter().collect();
-            let ba_map: HashMap<_, _> = ba.into_iter().collect();
-
-            prop_assert_eq!(ab_map.len(), ba_map.len());
-            for (id, score_ab) in &ab_map {
-                let score_ba = ba_map.get(id).expect("same keys");
-                prop_assert!((score_ab - score_ba).abs() < 1e-5,
-                    "CombMNZ not commutative for id {:?}: {} vs {}", id, score_ab, score_ba);
-            }
-        }
-
-        /// DBSF should be commutative (argument order doesn't change normalized scores)
-        #[test]
-        fn dbsf_commutative(a in arb_results(20), b in arb_results(20)) {
-            let ab = dbsf(&a, &b);
-            let ba = dbsf(&b, &a);
-
-            let ab_map: HashMap<_, _> = ab.into_iter().collect();
-            let ba_map: HashMap<_, _> = ba.into_iter().collect();
-
-            prop_assert_eq!(ab_map.len(), ba_map.len());
-            for (id, score_ab) in &ab_map {
-                let score_ba = ba_map.get(id).expect("same keys");
-                prop_assert!((score_ab - score_ba).abs() < 1e-5,
-                    "DBSF not commutative for id {:?}: {} vs {}", id, score_ab, score_ba);
-            }
-        }
-
-        #[test]
-        fn rrf_duplicate_handling_commutative(a in arb_results(20), b in arb_results(20)) {
-            // Create lists with potential duplicates by allowing same IDs
-            let mut a_with_dups = a.clone();
-            // Add a duplicate at a different rank
-            if !a_with_dups.is_empty() {
-                let dup_id = a_with_dups[0].0;
-                a_with_dups.push((dup_id, 0.5));
-            }
-
-            let ab = rrf(&a_with_dups, &b);
-            let ba = rrf(&b, &a_with_dups);
-
-            // Should have same document IDs (order may differ due to ties)
-            let ab_ids: std::collections::HashSet<_> = ab.iter().map(|(id, _)| *id).collect();
-            let ba_ids: std::collections::HashSet<_> = ba.iter().map(|(id, _)| *id).collect();
-            prop_assert_eq!(ab_ids, ba_ids);
-        }
-
-        #[test]
-        fn rrf_multi_some_empty_lists(
-            a in arb_results(10).prop_filter("need items", |v| !v.is_empty()),
-            b in arb_results(10).prop_filter("need items", |v| !v.is_empty())
-        ) {
-            let empty: Vec<(u32, f32)> = vec![];
-            let lists: Vec<&[(u32, f32)]> = vec![&a, &empty, &b];
-            let result = rrf_multi(&lists, RrfConfig::default());
-            // Should still produce results from non-empty lists
-            prop_assert!(!result.is_empty());
-        }
-
-        #[test]
-        fn rrf_weighted_length_validation(
-            a in arb_results(5),
-            b in arb_results(5)
-        ) {
-            // Test that mismatched lengths are caught
-            let lists: Vec<&[(u32, f32)]> = vec![&a, &b];
-            let weights_short = [0.5]; // 1 weight for 2 lists
-            let weights_long = [0.3, 0.3, 0.4]; // 3 weights for 2 lists
-
-            let result_short = rrf_weighted(&lists, &weights_short, RrfConfig::default());
-            let result_long = rrf_weighted(&lists, &weights_long, RrfConfig::default());
-
-            prop_assert!(matches!(result_short, Err(FusionError::InvalidConfig(_))));
-            prop_assert!(matches!(result_long, Err(FusionError::InvalidConfig(_))));
-        }
-
-        #[test]
-        fn rrf_k_uniformity(a in arb_results(10).prop_filter("need items", |v| v.len() >= 2)) {
-            let b: Vec<(u32, f32)> = vec![];
-
-            let low_k = rrf_with_config(&a, &b, RrfConfig::new(1));
-            let high_k = rrf_with_config(&a, &b, RrfConfig::new(1000));
-
-            if low_k.len() >= 2 && high_k.len() >= 2 {
-                let low_k_range = low_k[0].1 - low_k[low_k.len()-1].1;
-                let high_k_range = high_k[0].1 - high_k[high_k.len()-1].1;
-                prop_assert!(high_k_range <= low_k_range);
-            }
-        }
-
-        /// combmnz with overlap should score higher than without
-        #[test]
-        fn combmnz_overlap_bonus(id in 0u32..100, score in 0.1f32..1.0) {
-            let a = vec![(id, score)];
-            let b = vec![(id, score)];
-            let c = vec![(id + 1, score)]; // different id, no overlap
-
-            let overlapped = combmnz(&a, &b);
-            let disjoint = combmnz(&a, &c);
-
-            // Overlapped should have higher score (multiplied by 2)
-            let overlap_score = overlapped.iter().find(|(i, _)| *i == id).map(|(_, s)| *s).unwrap_or(0.0);
-            let disjoint_score = disjoint.iter().find(|(i, _)| *i == id).map(|(_, s)| *s).unwrap_or(0.0);
-            prop_assert!(overlap_score >= disjoint_score);
-        }
-
-        /// weighted with extreme weights should favor one side
-        #[test]
-        fn weighted_extreme_weights(a_id in 0u32..50, b_id in 50u32..100) {
-            let a = vec![(a_id, 1.0f32)];
-            let b = vec![(b_id, 1.0f32)];
-
-            let high_a = weighted(&a, &b, WeightedConfig::new(0.99, 0.01).with_normalize(false));
-            let high_b = weighted(&a, &b, WeightedConfig::new(0.01, 0.99).with_normalize(false));
-
-            // With single items and no normalization, the weighted score is just the weight
-            // Both items get their respective weighted score, so higher weight wins
-            let a_score_in_high_a = high_a.iter().find(|(id, _)| *id == a_id).map(|(_, s)| *s).unwrap_or(0.0);
-            let b_score_in_high_a = high_a.iter().find(|(id, _)| *id == b_id).map(|(_, s)| *s).unwrap_or(0.0);
-            prop_assert!(a_score_in_high_a > b_score_in_high_a);
-
-            let a_score_in_high_b = high_b.iter().find(|(id, _)| *id == a_id).map(|(_, s)| *s).unwrap_or(0.0);
-            let b_score_in_high_b = high_b.iter().find(|(id, _)| *id == b_id).map(|(_, s)| *s).unwrap_or(0.0);
-            prop_assert!(b_score_in_high_b > a_score_in_high_b);
-        }
-
-        /// all algorithms should produce non-empty output for non-empty input
-        #[test]
-        fn nonempty_output(a in arb_results(5).prop_filter("need items", |v| !v.is_empty())) {
-            let b: Vec<(u32, f32)> = vec![];
-
-            prop_assert!(!rrf(&a, &b).is_empty());
-            prop_assert!(!isr(&a, &b).is_empty());
-            prop_assert!(!combsum(&a, &b).is_empty());
-            prop_assert!(!combmnz(&a, &b).is_empty());
-            prop_assert!(!borda(&a, &b).is_empty());
-        }
-
-        // ─────────────────────────────────────────────────────────────────────────
-        // ISR Property Tests
-        // ─────────────────────────────────────────────────────────────────────────
-
-        /// ISR output should be bounded by input size
-        #[test]
-        fn isr_output_bounded(a in arb_results(50), b in arb_results(50)) {
-            let result = isr(&a, &b);
-            prop_assert!(result.len() <= a.len() + b.len());
-        }
-
-        /// ISR scores should be positive
-        #[test]
-        fn isr_scores_positive(a in arb_results(50), b in arb_results(50)) {
-            let result = isr(&a, &b);
-            for (_, score) in &result {
-                prop_assert!(*score > 0.0);
-            }
-        }
-
-        /// ISR should be commutative
-        #[test]
-        fn isr_commutative(a in arb_results(20), b in arb_results(20)) {
-            let ab = isr(&a, &b);
-            let ba = isr(&b, &a);
-
-            prop_assert_eq!(ab.len(), ba.len());
-
-            let ab_map: HashMap<_, _> = ab.into_iter().collect();
-            let ba_map: HashMap<_, _> = ba.into_iter().collect();
-
-            for (id, score_ab) in &ab_map {
-                let score_ba = ba_map.get(id).expect("same keys");
-                prop_assert!((score_ab - score_ba).abs() < 1e-6);
-            }
-        }
-
-        /// ISR should be sorted descending
-        #[test]
-        fn isr_sorted_descending(a in arb_results(50), b in arb_results(50)) {
-            let result = isr(&a, &b);
-            for window in result.windows(2) {
-                prop_assert!(window[0].1 >= window[1].1);
-            }
-        }
-
-        /// ISR top_k should be respected
-        #[test]
-        fn isr_top_k_respected(a in arb_results(50), b in arb_results(50), k in 1usize..20) {
-            let result = isr_with_config(&a, &b, RrfConfig::new(1).with_top_k(k));
-            prop_assert!(result.len() <= k);
-        }
-
-        /// ISR should have gentler decay than RRF (higher relative contribution from lower ranks)
-        /// Test uses unique IDs to isolate the decay function comparison
-        #[test]
-        fn isr_gentler_than_rrf(n in 3usize..20) {
-            // Create list with unique IDs at sequential ranks
-            let a: Vec<(u32, f32)> = (0..n as u32).map(|i| (i, 1.0)).collect();
-            let b: Vec<(u32, f32)> = vec![];
-
-            let rrf_result = rrf_with_config(&a, &b, RrfConfig::new(1));
-            let isr_result = isr_with_config(&a, &b, RrfConfig::new(1));
-
-            // Both should have all n unique items
-            prop_assert_eq!(rrf_result.len(), n);
-            prop_assert_eq!(isr_result.len(), n);
-
-            // Compare ratio of first to last score
-            let rrf_ratio = rrf_result[0].1 / rrf_result.last().unwrap().1;
-            let isr_ratio = isr_result[0].1 / isr_result.last().unwrap().1;
-
-            // ISR should have smaller ratio (gentler decay)
-            // RRF: 1/k vs 1/(k+n-1) => ratio = (k+n-1)/k = n for k=1
-            // ISR: 1/sqrt(k) vs 1/sqrt(k+n-1) => ratio = sqrt(k+n-1)/sqrt(k) = sqrt(n) for k=1
-            // sqrt(n) < n for n > 1, so ISR ratio should be smaller
-            prop_assert!(isr_ratio < rrf_ratio,
-                "ISR ratio {} should be < RRF ratio {} for n={}", isr_ratio, rrf_ratio, n);
-        }
-
-        /// multi variants should match two-list for n=2 (same scores, may differ in order for ties)
-        #[test]
-        fn multi_matches_two_list(a in arb_results(10), b in arb_results(10)) {
-            let two_list = rrf(&a, &b);
-            let multi = rrf_multi(&[a.clone(), b.clone()], RrfConfig::default());
-
-            prop_assert_eq!(two_list.len(), multi.len());
-
-            // Check same IDs with same scores (order may differ due to HashMap iteration)
-            let two_map: HashMap<_, _> = two_list.into_iter().collect();
-            let multi_map: HashMap<_, _> = multi.into_iter().collect();
-
-            for (id, score) in &two_map {
-                let multi_score = multi_map.get(id).expect("same ids");
-                prop_assert!((score - multi_score).abs() < 1e-6, "score mismatch for {:?}", id);
-            }
-        }
-
-        /// borda should give highest score to items in position 0
-        #[test]
-        fn borda_top_position_wins(n in 2usize..10) {
-            let top_id = 999u32;
-            let a: Vec<(u32, f32)> = std::iter::once((top_id, 1.0))
-                .chain((0..n as u32 - 1).map(|i| (i, 0.9 - i as f32 * 0.1)))
-                .collect();
-            let b: Vec<(u32, f32)> = std::iter::once((top_id, 1.0))
-                .chain((100..100 + n as u32 - 1).map(|i| (i, 0.9)))
-                .collect();
-
-            let f = borda(&a, &b);
-            prop_assert_eq!(f[0].0, top_id);
-        }
-
-        // ─────────────────────────────────────────────────────────────────────────
-        // NaN / Infinity / Edge Case Tests (learned from rank-refine)
-        // ─────────────────────────────────────────────────────────────────────────
-
-        /// NaN scores should not corrupt sort order
-        #[test]
-        fn nan_does_not_corrupt_sorting(a in arb_results(10)) {
-            let mut with_nan = a.clone();
-            if !with_nan.is_empty() {
-                with_nan[0].1 = f32::NAN;
-            }
-            let b: Vec<(u32, f32)> = vec![];
-
-            // Should not panic and should produce sorted output
-            let result = combsum(&with_nan, &b);
-            for window in result.windows(2) {
-                // With total_cmp, NaN sorts consistently
-                let cmp = window[0].1.total_cmp(&window[1].1);
-                prop_assert!(cmp != std::cmp::Ordering::Less,
-                    "Not sorted: {:?} < {:?}", window[0].1, window[1].1);
-            }
-        }
-
-        /// Infinity scores should be handled gracefully (no panics)
-        #[test]
-        fn infinity_handled_gracefully(id in 0u32..50) {
-            let a = vec![(id, f32::INFINITY)];
-            let b = vec![(id + 100, f32::NEG_INFINITY)]; // Different ID to avoid collision
-
-            // Should not panic
-            let result = combsum(&a, &b);
-            prop_assert_eq!(result.len(), 2);
-            // Just verify we got results, don't assert order (normalization changes things)
-        }
-
-        /// Output always sorted descending (invariant)
-        #[test]
-        fn output_always_sorted(a in arb_results(20), b in arb_results(20)) {
-            for result in [
-                rrf(&a, &b),
-                combsum(&a, &b),
-                combmnz(&a, &b),
-                borda(&a, &b),
-            ] {
-                for window in result.windows(2) {
-                    prop_assert!(
-                        window[0].1.total_cmp(&window[1].1) != std::cmp::Ordering::Less,
-                        "Not sorted: {} < {}", window[0].1, window[1].1
-                    );
-                }
-            }
-        }
-
-        /// Unique IDs in output (no duplicates)
-        #[test]
-        fn unique_ids_in_output(a in arb_results(20), b in arb_results(20)) {
-            let result = rrf(&a, &b);
-            let mut seen = std::collections::HashSet::new();
-            for (id, _) in &result {
-                prop_assert!(seen.insert(id), "Duplicate ID in output: {:?}", id);
-            }
-        }
-
-        /// CombSUM scores are non-negative after normalization
-        #[test]
-        fn combsum_scores_nonnegative(a in arb_results(10), b in arb_results(10)) {
-            let result = combsum(&a, &b);
-            for (_, score) in &result {
-                if !score.is_nan() {
-                    prop_assert!(*score >= -0.01, "Score {} is negative", score);
-                }
-            }
-        }
-
-        /// Equal weights produce symmetric treatment
-        #[test]
-        fn equal_weights_symmetric(a in arb_results(10), b in arb_results(10)) {
-            let ab = weighted(&a, &b, WeightedConfig::default());
-            let ba = weighted(&b, &a, WeightedConfig::default());
-
-            let ab_map: HashMap<_, _> = ab.into_iter().collect();
-            let ba_map: HashMap<_, _> = ba.into_iter().collect();
-
-            prop_assert_eq!(ab_map.len(), ba_map.len());
-            for (id, score_ab) in &ab_map {
-                if let Some(score_ba) = ba_map.get(id) {
-                    prop_assert!((score_ab - score_ba).abs() < 1e-5,
-                        "Symmetric treatment violated for {:?}: {} != {}", id, score_ab, score_ba);
-                }
-            }
-        }
-
-        /// RRF scores bounded by 2/k for items in both lists
-        #[test]
-        fn rrf_score_bounded(k in 1u32..1000) {
-            let a = vec![(1u32, 1.0)];
-            let b = vec![(1u32, 1.0)];
-
-            let result = rrf_with_config(&a, &b, RrfConfig::new(k));
-            let max_possible = 2.0 / k as f32; // rank 0 in both lists
-            prop_assert!(result[0].1 <= max_possible + 1e-6);
-        }
-
-        /// Empty list handling: combining with empty should equal single list
-        #[test]
-        fn empty_list_preserves_ids(n in 1usize..10) {
-            // Create list with unique IDs
-            let a: Vec<(u32, f32)> = (0..n as u32).map(|i| (i, 1.0 - i as f32 * 0.1)).collect();
-            let empty: Vec<(u32, f32)> = vec![];
-
-            let rrf_result = rrf(&a, &empty);
-
-            // Should have same number of unique IDs
-            prop_assert_eq!(rrf_result.len(), n);
-
-            // All original IDs should be present
-            for (id, _) in &a {
-                prop_assert!(rrf_result.iter().any(|(rid, _)| rid == id), "Missing ID {:?}", id);
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Explainability Tests
-// ─────────────────────────────────────────────────────────────────────────────
-
-#[cfg(test)]
-mod explain_tests {
-    use super::*;
-
-    #[test]
-    fn rrf_explain_basic() {
-        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
-        let dense = vec![("d2", 0.9), ("d3", 0.8)];
-
-        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
-
-        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::default());
-
-        // d2 should be top (appears in both lists)
-        assert_eq!(explained[0].id, "d2");
-        assert_eq!(explained[0].explanation.sources.len(), 2);
-        assert!((explained[0].explanation.consensus_score - 1.0).abs() < 1e-6);
-
-        // d1 and d3 should each have 1 source
-        let d1 = explained.iter().find(|r| r.id == "d1").unwrap();
-        assert_eq!(d1.explanation.sources.len(), 1);
-        assert!((d1.explanation.consensus_score - 0.5).abs() < 1e-6);
-    }
-
-    #[test]
-    fn rrf_explain_provenance() {
-        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
-        let dense = vec![("d2", 0.9), ("d3", 0.8)];
-
-        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
-
-        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::new(60));
-
-        let d2 = explained.iter().find(|r| r.id == "d2").unwrap();
-
-        // Check BM25 contribution
-        let bm25_contrib = d2
-            .explanation
-            .sources
-            .iter()
-            .find(|s| s.retriever_id == "bm25")
-            .unwrap();
-        assert_eq!(bm25_contrib.original_rank, Some(1));
-        assert_eq!(bm25_contrib.original_score, Some(11.0));
-        let expected_contrib = 1.0 / (60.0 + 1.0);
-        assert!((bm25_contrib.contribution - expected_contrib).abs() < 1e-6);
-
-        // Check dense contribution
-        let dense_contrib = d2
-            .explanation
-            .sources
-            .iter()
-            .find(|s| s.retriever_id == "dense")
-            .unwrap();
-        assert_eq!(dense_contrib.original_rank, Some(0));
-        assert_eq!(dense_contrib.original_score, Some(0.9));
-        let expected_contrib = 1.0 / 60.0;
-        assert!((dense_contrib.contribution - expected_contrib).abs() < 1e-6);
-    }
-
-    #[test]
-    fn rrf_explain_ranks() {
-        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
-        let dense = vec![("d2", 0.9), ("d3", 0.8)];
-
-        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
-
-        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::default());
-
-        // Ranks should be 0-indexed and sequential
-        for (rank, result) in explained.iter().enumerate() {
-            assert_eq!(result.rank, rank);
-        }
-    }
-
-    #[test]
-    fn analyze_consensus_basic() {
-        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
-        let dense = vec![("d2", 0.9), ("d3", 0.8)];
-
-        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
-
-        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::default());
-
-        let consensus = analyze_consensus(&explained);
-
-        // d2 appears in both lists (high consensus)
-        assert!(consensus.high_consensus.contains(&"d2"));
-
-        // d1 and d3 appear in only one list (single source)
-        assert!(consensus.single_source.contains(&"d1"));
-        assert!(consensus.single_source.contains(&"d3"));
-    }
-
-    #[test]
-    fn attribute_top_k_basic() {
-        let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
-        let dense = vec![("d2", 0.9), ("d3", 0.8)];
-
-        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
-
-        let explained = rrf_explain(&[&bm25[..], &dense[..]], &retrievers, RrfConfig::default());
-
-        let attribution = attribute_top_k(&explained, 3);
-
-        // Both retrievers should have contributed
-        assert!(attribution.contains_key("bm25"));
-        assert!(attribution.contains_key("dense"));
-
-        let bm25_stats = &attribution["bm25"];
-        assert!(bm25_stats.top_k_count > 0);
-
-        let dense_stats = &attribution["dense"];
-        assert!(dense_stats.top_k_count > 0);
-    }
-
-    #[test]
-    fn rrf_explain_empty_lists() {
-        let empty: Vec<(&str, f32)> = vec![];
-        let non_empty = vec![("d1", 1.0)];
-
-        let retrievers = vec![RetrieverId::new("empty"), RetrieverId::new("non_empty")];
-
-        let explained = rrf_explain(
-            &[&empty[..], &non_empty[..]],
-            &retrievers,
-            RrfConfig::default(),
-        );
-
-        assert_eq!(explained.len(), 1);
-        assert_eq!(explained[0].id, "d1");
-        assert_eq!(explained[0].explanation.sources.len(), 1);
-    }
-
-    #[test]
-    fn rrf_explain_mismatched_lengths() {
-        let bm25 = vec![("d1", 12.5)];
-        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
-
-        // Mismatch: 1 list but 2 retriever IDs
-        let explained = rrf_explain(&[&bm25[..]], &retrievers, RrfConfig::default());
-
-        // Should return empty (safety check)
-        assert!(explained.is_empty());
-    }
-
-    #[test]
-    fn rrf_explain_top_k() {
-        let bm25 = vec![("d1", 12.5), ("d2", 11.0), ("d3", 10.0)];
-        let dense = vec![("d2", 0.9), ("d3", 0.8), ("d4", 0.7)];
-
-        let retrievers = vec![RetrieverId::new("bm25"), RetrieverId::new("dense")];
-
-        let explained = rrf_explain(
-            &[&bm25[..], &dense[..]],
-            &retrievers,
-            RrfConfig::default().with_top_k(2),
-        );
-
-        assert_eq!(explained.len(), 2);
-    }
-
-    #[test]
-    fn combsum_explain_basic() {
-        let a = vec![("d1", 1.0), ("d2", 0.5)];
-        let b = vec![("d2", 1.0), ("d3", 0.5)];
-
-        let retrievers = vec![RetrieverId::new("a"), RetrieverId::new("b")];
-
-        let explained = combsum_explain(&[&a[..], &b[..]], &retrievers, FusionConfig::default());
-
-        assert_eq!(explained.len(), 3);
-        let d2 = explained.iter().find(|r| r.id == "d2").unwrap();
-        assert_eq!(d2.explanation.sources.len(), 2);
-    }
-
-    #[test]
-    fn combmax_basic() {
-        let a = [("d1", 1.0), ("d2", 0.5)];
-        let b = [("d2", 0.8), ("d3", 0.9)];
-
-        let result = combmax(&a, &b);
-        assert_eq!(result.len(), 3);
-        // d2 should have max(0.5, 0.8) = 0.8
-        let d2_score = result.iter().find(|(id, _)| *id == "d2").unwrap().1;
-        assert!((d2_score - 0.8).abs() < 1e-6);
-    }
-
-    #[test]
-    fn combmed_basic() {
-        let a = [("d1", 1.0), ("d2", 0.5)];
-        let b = [("d2", 0.8), ("d3", 0.9)];
-
-        let result = combmed(&a, &b);
-        assert_eq!(result.len(), 3);
-        // d2 should have median(0.5, 0.8) = 0.65
-        let d2_score = result.iter().find(|(id, _)| *id == "d2").unwrap().1;
-        assert!((d2_score - 0.65).abs() < 1e-6);
-    }
-
-    #[test]
-    fn rbc_basic() {
-        let a = [("d1", 1.0), ("d2", 0.5)];
-        let b = [("d2", 0.8), ("d3", 0.9)];
-
-        let result = rbc(&a, &b);
-        assert!(!result.is_empty());
-        // d2 appears in both lists, should rank high
-        let d2_rank = result.iter().position(|(id, _)| *id == "d2").unwrap();
-        assert!(d2_rank < 2);
-    }
-
-    #[test]
-    fn condorcet_basic() {
-        let a = [("d1", 1.0), ("d2", 0.5), ("d3", 0.3)];
-        let b = [("d2", 0.9), ("d1", 0.8), ("d3", 0.7)];
-
-        let result = condorcet(&a, &b);
-        assert!(!result.is_empty());
-        // d2 should win (rank 1,0 vs d1's 0,1)
-    }
-
-    #[test]
-    fn ndcg_basic() {
-        let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
-        let qrels = std::collections::HashMap::from([
-            ("d1", 2), // highly relevant
-            ("d2", 1), // relevant
-        ]);
-
-        let score = ndcg_at_k(&results, &qrels, 3);
-        assert!(score > 0.0 && score <= 1.0);
-    }
-
-    #[test]
-    fn mrr_basic() {
-        let results = vec![("d1", 1.0), ("d2", 0.9)];
-        let qrels = std::collections::HashMap::from([("d2", 1)]);
-
-        let score = mrr(&results, &qrels);
-        // d2 is at rank 1 (0-indexed), so MRR = 1/2 = 0.5
-        assert!((score - 0.5).abs() < 1e-6);
-    }
-
-    #[test]
-    fn recall_basic() {
-        let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
-        let qrels = std::collections::HashMap::from([
-            ("d1", 1),
-            ("d2", 1),
-            ("d4", 1), // not in results
-        ]);
-
-        let score = recall_at_k(&results, &qrels, 3);
-        // 2 relevant docs in top-3 out of 3 total = 2/3
-        assert!((score - 2.0 / 3.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn fusion_strategy_rrf() {
-        let strategy = FusionStrategy::rrf(60);
-        let a = [("d1", 1.0), ("d2", 0.5)];
-        let b = [("d2", 0.9), ("d3", 0.8)];
-
-        let result = strategy.fuse(&[&a[..], &b[..]]);
-        assert!(!result.is_empty());
-        assert_eq!(strategy.name(), "rrf");
-        assert!(!strategy.uses_scores());
-    }
-
-    #[test]
-    fn normalize_scores_minmax() {
-        let scores = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
-        let normalized = normalize_scores(&scores, Normalization::MinMax);
-
-        assert_eq!(normalized.len(), 3);
-        // d1 should be 1.0, d3 should be 0.0
-        let d1 = normalized.iter().find(|(id, _)| *id == "d1").unwrap().1;
-        let d3 = normalized.iter().find(|(id, _)| *id == "d3").unwrap().1;
-        assert!((d1 - 1.0).abs() < 1e-6);
-        assert!((d3 - 0.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn normalize_scores_zscore() {
-        let scores = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
-        let normalized = normalize_scores(&scores, Normalization::ZScore);
-
-        assert_eq!(normalized.len(), 3);
-        // Mean = 5.0, std ≈ 4.08, so d1 should be positive, d3 negative
-        let d1 = normalized.iter().find(|(id, _)| *id == "d1").unwrap().1;
-        let d3 = normalized.iter().find(|(id, _)| *id == "d3").unwrap().1;
-        assert!(d1 > 0.0);
-        assert!(d3 < 0.0);
-    }
-
-    #[test]
-    fn normalize_scores_sum() {
-        let scores = vec![("d1", 2.0), ("d2", 1.0), ("d3", 1.0)];
-        let normalized = normalize_scores(&scores, Normalization::Sum);
-
-        let sum: f32 = normalized.iter().map(|(_, s)| s).sum();
-        assert!((sum - 1.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn normalize_scores_rank() {
-        let scores = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
-        let normalized = normalize_scores(&scores, Normalization::Rank);
-
-        // Highest score should get highest rank-normalized value
-        let d1 = normalized.iter().find(|(id, _)| *id == "d1").unwrap().1;
-        let d3 = normalized.iter().find(|(id, _)| *id == "d3").unwrap().1;
-        assert!(d1 > d3);
-    }
-
-    #[test]
-    fn combsum_explain_shows_normalization() {
-        let a = vec![("d1", 1.0), ("d2", 0.5)];
-        let b = vec![("d2", 1.0), ("d3", 0.5)];
-
-        let retrievers = vec![RetrieverId::new("a"), RetrieverId::new("b")];
-        let explained = combsum_explain(&[&a[..], &b[..]], &retrievers, FusionConfig::default());
-
-        let d2 = explained.iter().find(|r| r.id == "d2").unwrap();
-        // d2 should have normalized scores from both sources
-        assert_eq!(d2.explanation.sources.len(), 2);
-        for source in &d2.explanation.sources {
-            assert!(source.normalized_score.is_some());
-        }
-    }
-
-    #[test]
-    fn combmnz_explain_shows_overlap_multiplier() {
-        let a = vec![("d1", 1.0)];
-        let b = vec![("d1", 1.0), ("d2", 0.5)];
-
-        let retrievers = vec![RetrieverId::new("a"), RetrieverId::new("b")];
-        let explained = combmnz_explain(&[&a[..], &b[..]], &retrievers, FusionConfig::default());
-
-        let d1 = explained.iter().find(|r| r.id == "d1").unwrap();
-        // d1 appears in both lists, so contributions should reflect multiplier
-        assert_eq!(d1.explanation.sources.len(), 2);
-        // Final score should be higher than combsum due to overlap bonus
-        let combsum_result = combsum(&a, &b);
-        let combsum_d1 = combsum_result.iter().find(|(id, _)| *id == "d1").unwrap().1;
-        assert!(d1.score > combsum_d1);
-    }
-
-    #[test]
-    fn dbsf_explain_shows_zscore() {
-        let a = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
-        let b = vec![("d1", 0.9), ("d2", 0.5), ("d4", 0.1)];
-
-        let retrievers = vec![RetrieverId::new("a"), RetrieverId::new("b")];
-        let explained = dbsf_explain(&[&a[..], &b[..]], &retrievers, FusionConfig::default());
-
-        let d1 = explained.iter().find(|r| r.id == "d1").unwrap();
-        // Should have z-score normalized contributions
-        for source in &d1.explanation.sources {
-            assert!(source.normalized_score.is_some());
-            // Z-scores should be in reasonable range (clipped to [-3, 3])
-            let z = source.normalized_score.unwrap();
-            assert!(z >= -3.0 && z <= 3.0);
-        }
-    }
-
-    #[test]
-    fn optimize_fusion_rrf_k() {
-        let qrels = std::collections::HashMap::from([("d1", 2), ("d2", 1)]);
-
-        let run1 = vec![("d1", 0.9), ("d2", 0.8)];
-        let run2 = vec![("d2", 0.9), ("d1", 0.7)];
-        let runs = vec![run1, run2];
-
-        let config = OptimizeConfig {
-            method: FusionMethod::Rrf { k: 60 },
-            metric: OptimizeMetric::Ndcg { k: 10 },
-            param_grid: ParamGrid::RrfK {
-                values: vec![20, 60, 100],
-            },
-        };
-
-        let optimized = optimize_fusion(&qrels, &runs, config);
-        assert!(optimized.best_score >= 0.0 && optimized.best_score <= 1.0);
-        assert!(!optimized.best_params.is_empty());
-    }
-
-    #[test]
-    fn optimize_fusion_weighted() {
-        let qrels = std::collections::HashMap::from([("d1", 1)]);
-
-        let run1 = [("d1", 0.9), ("d2", 0.5)];
-        let run2 = [("d1", 0.8), ("d2", 0.6)];
-        let runs = vec![run1.to_vec(), run2.to_vec()];
-
-        let config = OptimizeConfig {
-            method: FusionMethod::Weighted {
-                weight_a: 0.5,
-                weight_b: 0.5,
-                normalize: true,
-            },
-            metric: OptimizeMetric::Mrr,
-            param_grid: ParamGrid::Weighted {
-                weight_combinations: vec![vec![0.5, 0.5], vec![0.7, 0.3], vec![0.3, 0.7]],
-            },
-        };
-
-        let optimized = optimize_fusion(&qrels, &runs, config);
-        assert!(optimized.best_score >= 0.0);
-    }
-
-    #[test]
-    fn metrics_ndcg_perfect_ranking() {
-        // Perfect ranking: relevant docs at top
-        let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
-        let qrels = std::collections::HashMap::from([
-            ("d1", 2), // highly relevant
-            ("d2", 1), // relevant
-        ]);
-
-        let ndcg = ndcg_at_k(&results, &qrels, 10);
-        assert!(ndcg > 0.0 && ndcg <= 1.0);
-    }
-
-    #[test]
-    fn metrics_mrr_first_relevant() {
-        let results = vec![("d1", 1.0), ("d2", 0.9)];
-        let qrels = std::collections::HashMap::from([("d2", 1)]);
-
-        let mrr_score = mrr(&results, &qrels);
-        // d2 is at rank 1 (0-indexed), so MRR = 1/2 = 0.5
-        assert!((mrr_score - 0.5).abs() < 1e-6);
-    }
-
-    #[test]
-    fn metrics_recall_complete() {
-        let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
-        let qrels = std::collections::HashMap::from([
-            ("d1", 1),
-            ("d2", 1),
-            ("d4", 1), // not in results
-        ]);
-
-        let recall = recall_at_k(&results, &qrels, 10);
-        // 2 relevant docs in results out of 3 total = 2/3
-        assert!((recall - 2.0 / 3.0).abs() < 1e-6);
-    }
-}
+// Property tests are in a separate module (proptests.rs) to avoid macro expansion issues

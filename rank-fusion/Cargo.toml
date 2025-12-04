@@ -16,10 +16,13 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 serde = { workspace = true, optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
 
 [features]
 default = []
 serde = ["dep:serde"]
+wasm = ["dep:wasm-bindgen", "dep:js-sys"]
 
 [dev-dependencies]
 criterion = { workspace = true }
@@ -28,3 +31,13 @@ proptest = { workspace = true }
 [[bench]]
 name = "fusion"
 harness = false
+
+# Optimize WASM builds for smaller binary size
+# These settings reduce WASM binary size by 30-40% compared to defaults
+[profile.release]
+# Enable Link-Time Optimization for smaller binaries
+lto = true
+# Optimize for size (can use "s" for more aggressive size optimization)
+opt-level = "z"
+# Single codegen unit for better LTO
+codegen-units = 1

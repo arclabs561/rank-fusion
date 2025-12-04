@@ -1,0 +1,39 @@
+[package]
+name = "test-e2e-local"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+# Simulate published dependencies - use path dependencies that mimic published versions
+rank-fusion = { path = "../rank-fusion", version = "0.1.19" }
+rank-eval = { path = "../../rank-eval", version = "0.1.0" }
+rank-refine = { path = "../../rank-refine/rank-refine", version = "0.7.36" }
+
+# Test utilities
+tempfile = "3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "test-fusion-basic"
+path = "src/bin/test_fusion_basic.rs"
+
+[[bin]]
+name = "test-fusion-eval-integration"
+path = "src/bin/test_fusion_eval_integration.rs"
+
+[[bin]]
+name = "test-refine-basic"
+path = "src/bin/test_refine_basic.rs"
+
+[[bin]]
+name = "test-eval-basic"
+path = "src/bin/test_eval_basic.rs"
+
+[[bin]]
+name = "test-full-pipeline"
+path = "src/bin/test_full_pipeline.rs"

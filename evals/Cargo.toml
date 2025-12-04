@@ -4,8 +4,37 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[lib]
+name = "rank_fusion_evals"
+path = "src/lib.rs"
+
 [dependencies]
-rank-fusion = { path = ".." }
+rank-fusion = { path = "../rank-fusion" }
+rank-eval = { path = "../../rank-eval" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+flate2 = "1.0"
+tar = "0.4"
+zip = "0.6"
+anyhow = "1.0"
+url = "2.5"
+clap = { version = "4", features = ["derive"] }
+tempfile = "3"
+
+[[bin]]
+name = "evaluate-real-world"
+path = "src/bin/evaluate_real_world.rs"
+
+[[bin]]
+name = "list-datasets"
+path = "src/bin/list_datasets.rs"
+
+[[bin]]
+name = "validate-dataset"
+path = "src/bin/validate_dataset.rs"
+
+[[bin]]
+name = "dataset-stats"
+path = "src/bin/dataset_stats.rs"
 

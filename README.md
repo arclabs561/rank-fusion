@@ -1,6 +1,17 @@
 # rank-fusion
 
+[![CI](https://github.com/arclabs561/rank-fusion/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/rank-fusion/actions)
+[![Crates.io](https://img.shields.io/crates/v/rank-fusion.svg)](https://crates.io/crates/rank-fusion)
+[![Docs](https://docs.rs/rank-fusion/badge.svg)](https://docs.rs/rank-fusion)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
+
 Rank fusion algorithms for hybrid search — RRF, ISR, CombMNZ, Borda, DBSF, and more.
+
+## Why Rank Fusion?
+
+Hybrid search combines multiple retrievers (BM25, dense embeddings, sparse vectors) to get the best of each. **Problem**: Different retrievers use incompatible score scales. BM25 might score 0-100, while dense embeddings score 0-1. Normalization is fragile and requires tuning.
+
+**Solution**: RRF (Reciprocal Rank Fusion) ignores scores and uses only rank positions. No normalization needed, works with any score distribution.
 
 This repository contains a Cargo workspace with multiple crates:
 
@@ -26,22 +37,10 @@ let fused = rrf(&bm25, &dense);
 
 ### Python
 
-**Using uv (recommended):**
+**Install from PyPI:**
 
 ```bash
-cd rank-fusion-python
-uv venv
-source .venv/bin/activate
-uv tool install maturin
-maturin develop --uv
-```
-
-**Or using pip:**
-
-```bash
-cd rank-fusion-python
-pip install maturin
-maturin develop --release
+pip install rank-fusion
 ```
 
 ```python
@@ -50,6 +49,17 @@ import rank_fusion
 bm25 = [("d1", 12.5), ("d2", 11.0)]
 dense = [("d2", 0.9), ("d3", 0.8)]
 fused = rank_fusion.rrf(bm25, dense, k=60)
+# [("d2", 0.033), ("d1", 0.016), ("d3", 0.016)]
+```
+
+**For development/contributing:**
+
+```bash
+cd rank-fusion-python
+uv venv
+source .venv/bin/activate
+uv tool install maturin
+maturin develop --uv
 ```
 
 ### Node.js / WebAssembly
@@ -106,10 +116,15 @@ fuseResults();
 
 ## Documentation
 
-- [Core crate documentation](rank-fusion/README.md)
-- [Python bindings](rank-fusion-python/README.md)
-- [Integration guide](rank-fusion/INTEGRATION.md)
-- [Design principles](rank-fusion/DESIGN.md)
+- **[Core crate documentation](rank-fusion/README.md)** - Complete API reference and examples
+- **[Python bindings](rank-fusion-python/README.md)** - Python usage guide
+- **[Getting Started](rank-fusion/GETTING_STARTED.md)** - Tutorial with real-world examples
+- **[Integration guide](rank-fusion/INTEGRATION.md)** - Framework-specific examples
+- **[Design principles](rank-fusion/DESIGN.md)** - Algorithm details and theory
+- **[Performance guide](rank-fusion/PERFORMANCE.md)** - Benchmarks and optimization tips
+- **[API Documentation](https://docs.rs/rank-fusion)** - Full API reference on docs.rs
+- **[Examples](rank-fusion/examples/)** - Runnable example code
+- **[CHANGELOG](rank-fusion/CHANGELOG.md)** - Version history and changes
 
 ## Development
 
@@ -146,5 +161,4 @@ This repository uses a Cargo workspace to organize the codebase:
 - **Path dependencies** — Python crate depends on core via path (no version conflicts)
 - **Default members** — Only core crate builds by default (`cargo build`)
 
-See [`archive/2025-01/LIGHTWEIGHT_WORKSPACE_PATTERNS.md`](archive/2025-01/LIGHTWEIGHT_WORKSPACE_PATTERNS.md) for details on the workspace design.
 

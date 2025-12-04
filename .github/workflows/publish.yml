@@ -15,7 +15,7 @@ jobs:
       - name: Check version consistency
         run: |
           ROOT_VERSION=$(grep '^version = ' Cargo.toml | cut -d'"' -f2)
-          CRATE_VERSION=$(grep '^version = ' rank-fusion/Cargo.toml | grep -o '".*"' | tr -d '"' || echo "workspace")
+          CRATE_VERSION=$(grep '^version = ' rank-fusion/rank-fusion/Cargo.toml | grep -o '".*"' | tr -d '"' || echo "workspace")
           PYTHON_VERSION=$(grep '^version = ' rank-fusion-python/pyproject.toml | cut -d'"' -f2)
           
           if [ "$CRATE_VERSION" = "workspace" ]; then
@@ -75,6 +75,14 @@ jobs:
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Install maturin
         run: uv tool install maturin
+      - name: Verify Python package structure
+        working-directory: rank-fusion-python
+        run: |
+          if [ ! -f "pyproject.toml" ]; then
+            echo "❌ pyproject.toml not found"
+            exit 1
+          fi
+          echo "✅ Python package structure verified"
       - name: Build and publish to PyPI
         working-directory: rank-fusion-python
         uses: pypa/gh-action-pypi-publish@release/v1

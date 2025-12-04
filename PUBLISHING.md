@@ -7,17 +7,19 @@ This guide covers publishing `rank-fusion` to:
 
 ## Prerequisites
 
+All publishing uses **OIDC (OpenID Connect) authentication** - no manual tokens needed!
+
 1. **crates.io account**: https://crates.io
-   - Get API token: https://crates.io/me
-   - Add to GitHub secrets as `CRATES_IO_TOKEN`
+   - Configure OIDC trusted publisher in GitHub Actions (already configured)
+   - Uses `rust-lang/crates-io-auth-action@v1` for authentication
 
 2. **PyPI account**: https://pypi.org
-   - Get API token: https://pypi.org/manage/account/token/
-   - Add to GitHub secrets as `PYPI_API_TOKEN`
+   - Configure trusted publisher: https://pypi.org/manage/account/publishing/
+   - Uses `pypa/gh-action-pypi-publish@release/v1` (pending trusted publisher)
 
 3. **npm account** (for WASM): https://www.npmjs.com
-   - Get access token: https://www.npmjs.com/settings/{username}/tokens
-   - Add to GitHub secrets as `NPM_TOKEN`
+   - Configure OIDC trusted publisher in npm settings
+   - Uses GitHub Actions OIDC (no token needed)
 
 ## Publishing Workflow
 
@@ -40,14 +42,16 @@ This guide covers publishing `rank-fusion` to:
 #### 1. Publish Rust Crate
 
 ```bash
-cd rank-fusion
+cd rank-fusion/rank-fusion
+# For automated publishing, use GitHub Actions (recommended)
+# For manual publishing, you'll need a crates.io API token:
 cargo publish --token YOUR_CRATES_IO_TOKEN
 ```
 
 #### 2. Publish Python Package
 
 ```bash
-cd rank-fusion-python
+cd rank-fusion/rank-fusion-python
 uv venv
 source .venv/bin/activate
 uv tool install maturin
@@ -55,7 +59,7 @@ uv tool install maturin
 # Test first
 maturin build --uv
 
-# Publish
+# Publish (uses trusted publisher if configured, otherwise use token)
 maturin publish --uv --username __token__ --password YOUR_PYPI_TOKEN
 ```
 
@@ -67,11 +71,11 @@ If you want to publish WASM bindings:
 # Install wasm-pack
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-# Build for npm
-cd rank-fusion
-wasm-pack build --target nodejs --out-dir pkg
+# Build for npm (with wasm feature enabled)
+cd rank-fusion/rank-fusion
+wasm-pack build --target nodejs --out-dir pkg --scope arclabs561 -- --features wasm
 
-# Publish to npm
+# Publish to npm (uses OIDC if configured, otherwise use token)
 cd pkg
 npm publish --access public
 ```

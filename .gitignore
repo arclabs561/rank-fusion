@@ -1,5 +1,6 @@
 /target
 /mutants.out*
+/mutants.out.old
 /proptest-regressions
 OUTREACH.md
 evals/target/
@@ -16,3 +17,6 @@ evals/eval_results.json
 *.dylib
 *.dll
 .env
+# Build artifacts
+**/pkg/
+*.wasm

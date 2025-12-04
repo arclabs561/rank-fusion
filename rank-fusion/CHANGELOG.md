@@ -1,5 +1,52 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Standardized Fusion (ERANK-style)**: Z-score normalization with configurable clipping
+  - `standardized(&a, &b)` — simple API with default clipping [-3.0, 3.0]
+  - `standardized_with_config(&a, &b, config)` — customizable clipping range and top_k
+  - `standardized_multi` for 3+ lists
+  - `FusionMethod::Standardized` variant
+  - `StandardizedConfig` with `clip_range` and `top_k` options
+  - More robust to outliers than min-max normalization
+  - Handles negative scores naturally (z-score works with any distribution)
+  - Based on ERANK paper showing 2-5% NDCG improvement when distributions differ
+- **Additive Multi-Task Fusion (ResFlow-style)**: Weighted additive fusion for multi-task ranking
+  - `additive_multi_task(&a, &b, config)` — configurable weights and normalization
+  - `additive_multi_task_multi` for 3+ lists
+  - `FusionMethod::AdditiveMultiTask` variant
+  - `AdditiveMultiTaskConfig` with weights, normalization method, and top_k
+  - Optimized for e-commerce ranking (CTR + CTCVR with 1:20 weight ratio)
+  - Supports all normalization methods (ZScore, MinMax, Sum, Rank, None)
+  - Based on ResFlow paper showing additive outperforms multiplicative for multi-task ranking
+- **Fine-Grained Scoring (0-10 integer scale)** in `rank-refine`:
+  - `rerank_fine_grained()` — maps similarity scores to 0-10 integer scale
+  - `FineGrainedConfig` with score range, temperature, and normalization options
+  - Better discrimination than binary classification
+  - Useful for LLM-based reranking with integer outputs
+- 13 new evaluation scenarios testing:
+  - Distribution mismatch handling
+  - Outlier robustness
+  - Negative score handling
+  - Extreme weight ratios (1:100)
+  - E-commerce funnel scenarios
+- 2 new example files:
+  - `examples/standardized_fusion.rs` — demonstrates standardized fusion
+  - `examples/additive_multi_task.rs` — demonstrates ResFlow-style multi-task fusion
+- Comprehensive test coverage:
+  - 8 new unit tests for standardized fusion
+  - 6 new unit tests for additive multi-task fusion
+  - 5 new integration tests for standardized fusion
+  - 5 new integration tests for additive multi-task fusion
+  - 5 new integration tests for fine-grained scoring
+  - Total: 169 tests passing (113 unit + 22 integration + 34 rank-refine)
+
+### Changed
+- Evaluation system now includes new methods in all scenarios
+- HTML evaluation report updated with method descriptions
+- Benchmarks added for `standardized` and `additive_multi_task`
+
 ## [0.1.18] - 2025-11-27
 
 ### Added

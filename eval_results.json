@@ -1,0 +1,6720 @@
+[
+  {
+    "name": "rrf_overlap_boost",
+    "description": "RRF with k=60 gives strong bonus to overlapping docs.",
+    "insight": "With k=60, RRF score is ~1/61 per list. Overlap gives ~2/61, beating any single-list doc.",
+    "expected_winner": "rrf",
+    "actual_winner": "combmnz",
+    "correct": true,
+    "methods": {
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr_a1",
+          "irr_b1",
+          "irr_a2",
+          "irr_b2",
+          "irr_b3",
+          "irr_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "irr_b1",
+          "irr_a1",
+          "rel1",
+          "irr_a2",
+          "rel2",
+          "irr_b2",
+          "irr_b3",
+          "irr_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_5": 0.5437713091520254,
+          "ndcg_at_10": 0.5437713091520254,
+          "average_precision": 0.3666666666666667
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "irr_a1",
+          "irr_a2",
+          "rel1",
+          "rel2",
+          "irr_b1",
+          "irr_b2",
+          "irr_a3",
+          "irr_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_5": 0.5706417189553201,
+          "ndcg_at_10": 0.5706417189553201,
+          "average_precision": 0.41666666666666663
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "irr_b1",
+          "irr_a1",
+          "irr_a2",
+          "rel2",
+          "irr_b2",
+          "irr_b3",
+          "irr_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8503449055347546,
+          "ndcg_at_10": 0.8503449055347546,
+          "average_precision": 0.7
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "irr_b1",
+          "irr_a1",
+          "rel1",
+          "irr_a2",
+          "rel2",
+          "irr_b2",
+          "irr_b3",
+          "irr_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_5": 0.5437713091520254,
+          "ndcg_at_10": 0.5437713091520254,
+          "average_precision": 0.3666666666666667
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr_b1",
+          "irr_a1",
+          "irr_a2",
+          "irr_b2",
+          "irr_a3",
+          "irr_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "irr_a1",
+          "rel1",
+          "irr_a2",
+          "rel2",
+          "irr_b1",
+          "irr_b2",
+          "irr_b3",
+          "irr_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6509209298071326,
+          "ndcg_at_10": 0.6509209298071326,
+          "average_precision": 0.5
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr_a1",
+          "irr_b1",
+          "irr_a2",
+          "irr_b2",
+          "irr_a3",
+          "irr_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "irr_b1",
+          "irr_a1",
+          "rel1",
+          "irr_a2",
+          "rel2",
+          "irr_b2",
+          "irr_b3",
+          "irr_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_5": 0.5437713091520254,
+          "ndcg_at_10": 0.5437713091520254,
+          "average_precision": 0.3666666666666667
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "irr_b1",
+          "irr_a1",
+          "rel2",
+          "irr_a2",
+          "irr_b2",
+          "irr_a3",
+          "irr_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8772153153380493,
+          "ndcg_at_10": 0.8772153153380493,
+          "average_precision": 0.75
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "irr_b1",
+          "rel1",
+          "irr_a1",
+          "irr_a2",
+          "rel2",
+          "irr_a3",
+          "irr_b2",
+          "irr_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6240505200038379,
+          "ndcg_at_10": 0.6240505200038379,
+          "average_precision": 0.45
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "irr_b1",
+          "irr_a1",
+          "rel1",
+          "irr_a2",
+          "rel2",
+          "irr_b2",
+          "irr_b3",
+          "irr_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_5": 0.5437713091520254,
+          "ndcg_at_10": 0.5437713091520254,
+          "average_precision": 0.3666666666666667
+        }
+      }
+    }
+  },
+  {
+    "name": "combmnz_overlap_multiplier",
+    "description": "CombMNZ multiplies by overlap count, boosting shared docs.",
+    "insight": "score = normalized_sum × appearance_count. Overlap docs get 2× multiplier.",
+    "expected_winner": "combmnz",
+    "actual_winner": "combmnz",
+    "correct": true,
+    "methods": {
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "noise_b1",
+          "noise_a1",
+          "noise_b2",
+          "rel2",
+          "noise_a2",
+          "noise_b3",
+          "noise_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8503449055347546,
+          "ndcg_at_10": 0.8503449055347546,
+          "average_precision": 0.7
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "noise_b1",
+          "rel1",
+          "noise_a1",
+          "noise_b2",
+          "noise_a2",
+          "noise_a3",
+          "rel2",
+          "noise_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.5,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.38685280723454163,
+          "ndcg_at_10": 0.5912352048230277,
+          "average_precision": 0.39285714285714285
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "noise_a1",
+          "rel2",
+          "noise_b1",
+          "noise_a2",
+          "noise_b2",
+          "noise_a3",
+          "noise_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "noise_a1",
+          "noise_b1",
+          "noise_b2",
+          "noise_a2",
+          "noise_a3",
+          "noise_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "noise_b1",
+          "noise_a1",
+          "noise_b2",
+          "noise_a2",
+          "noise_b3",
+          "noise_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "noise_a1",
+          "rel2",
+          "noise_b1",
+          "noise_b2",
+          "noise_a2",
+          "noise_b3",
+          "noise_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "noise_a1",
+          "noise_b1",
+          "noise_b2",
+          "noise_a2",
+          "noise_a3",
+          "noise_b3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "noise_a1",
+          "rel1",
+          "rel2",
+          "noise_a2",
+          "noise_b1",
+          "noise_b2",
+          "noise_b3",
+          "noise_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "noise_b1",
+          "noise_a1",
+          "noise_b2",
+          "rel2",
+          "noise_a2",
+          "noise_b3",
+          "noise_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8503449055347546,
+          "ndcg_at_10": 0.8503449055347546,
+          "average_precision": 0.7
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "noise_a1",
+          "noise_b1",
+          "rel2",
+          "noise_b2",
+          "noise_a2",
+          "noise_b3",
+          "noise_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8772153153380493,
+          "ndcg_at_10": 0.8772153153380493,
+          "average_precision": 0.75
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "noise_b1",
+          "noise_a1",
+          "noise_b2",
+          "rel2",
+          "noise_a2",
+          "noise_b3",
+          "noise_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8503449055347546,
+          "ndcg_at_10": 0.8503449055347546,
+          "average_precision": 0.7
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "noise_b1",
+          "noise_a1",
+          "noise_b2",
+          "rel2",
+          "noise_a2",
+          "noise_b3",
+          "noise_a3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8503449055347546,
+          "ndcg_at_10": 0.8503449055347546,
+          "average_precision": 0.7
+        }
+      }
+    }
+  },
+  {
+    "name": "rank_based_beats_outlier",
+    "description": "Score-based methods struggle with outliers; rank-based ignore them.",
+    "insight": "Rank-based methods (RRF/ISR/Borda) ignore score magnitude entirely. Borda penalizes inconsistent rankings.",
+    "expected_winner": "borda",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "outlier",
+          "irr4",
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr7"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "outlier",
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "outlier",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr7"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "outlier",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "outlier",
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr7"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2",
+          "outlier"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "outlier",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "outlier",
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr1",
+          "irr7",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "outlier",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "weighted_downweight_bad",
+    "description": "Weighted fusion with 0.9/0.1 controls bad retriever B.",
+    "insight": "When retriever quality is known a priori, explicit weighting helps.",
+    "expected_winner": "weighted",
+    "actual_winner": "weighted_0.7",
+    "correct": true,
+    "methods": {
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "irr3",
+          "irr4",
+          "irr5",
+          "rel2",
+          "rel3",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.3,
+          "recall_at_5": 0.6666666666666666,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.6508205185601091,
+          "ndcg_at_10": 0.8179809735263114,
+          "average_precision": 0.6333333333333333
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "rel3",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.3,
+          "recall_at_5": 0.6666666666666666,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.7653606369886217,
+          "ndcg_at_10": 0.9325210919548239,
+          "average_precision": 0.8333333333333334
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "rel3",
+          "irr1",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.6,
+          "precision_at_10": 0.3,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "irr3",
+          "irr4",
+          "irr5",
+          "rel3",
+          "irr1",
+          "irr2",
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.3,
+          "recall_at_5": 0.3333333333333333,
+          "recall_at_10": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_5": 0.20210734650054757,
+          "ndcg_at_10": 0.5065745439910657,
+          "average_precision": 0.30357142857142855
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "irr3",
+          "irr4",
+          "irr5",
+          "rel3",
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.3,
+          "recall_at_5": 0.6666666666666666,
+          "recall_at_10": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_5": 0.38364913903790027,
+          "ndcg_at_10": 0.5508095940041026,
+          "average_precision": 0.3833333333333333
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "irr3",
+          "irr4",
+          "irr5",
+          "rel3",
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.3,
+          "recall_at_5": 0.6666666666666666,
+          "recall_at_10": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_5": 0.38364913903790027,
+          "ndcg_at_10": 0.5508095940041026,
+          "average_precision": 0.3833333333333333
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "rel3",
+          "irr5",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.6,
+          "precision_at_10": 0.3,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9469024295259745,
+          "ndcg_at_10": 0.9469024295259745,
+          "average_precision": 0.8666666666666667
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "rel3",
+          "irr5",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.6,
+          "precision_at_10": 0.3,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9469024295259745,
+          "ndcg_at_10": 0.9469024295259745,
+          "average_precision": 0.8666666666666667
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "irr3",
+          "irr4",
+          "irr5",
+          "rel3",
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.3,
+          "recall_at_5": 0.6666666666666666,
+          "recall_at_10": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_5": 0.38364913903790027,
+          "ndcg_at_10": 0.5508095940041026,
+          "average_precision": 0.3833333333333333
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "rel3",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.6,
+          "precision_at_10": 0.3,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "irr3",
+          "irr4",
+          "irr5",
+          "rel3",
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.3,
+          "recall_at_5": 0.6666666666666666,
+          "recall_at_10": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_5": 0.38364913903790027,
+          "ndcg_at_10": 0.5508095940041026,
+          "average_precision": 0.3833333333333333
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "rel3",
+          "irr5",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.6,
+          "precision_at_10": 0.3,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9469024295259745,
+          "ndcg_at_10": 0.9469024295259745,
+          "average_precision": 0.8666666666666667
+        }
+      }
+    }
+  },
+  {
+    "name": "all_equal_agreement",
+    "description": "When retrievers agree, all fusion methods produce same ranking.",
+    "insight": "Perfect agreement is the degenerate case where fusion doesn't matter.",
+    "expected_winner": "all_equal",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "borda_penalizes_erratic",
+    "description": "Borda count penalizes docs with inconsistent rankings across lists.",
+    "insight": "Borda score = sum(N - rank). Erratic #1/#10 loses to consistent #2/#2.",
+    "expected_winner": "borda",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "isr": {
+        "ranking": [
+          "consistent1",
+          "erratic",
+          "consistent2",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr1",
+          "irr2",
+          "irr7",
+          "irr8",
+          "irr9",
+          "erratic"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9",
+          "erratic",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "erratic",
+          "consistent1",
+          "consistent2",
+          "irr1",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "erratic",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9",
+          "irr1",
+          "erratic",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "consistent1",
+          "erratic",
+          "consistent2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr8",
+          "irr9",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9",
+          "irr1",
+          "erratic",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9",
+          "irr1",
+          "erratic",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "erratic",
+          "irr3",
+          "irr4",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "erratic",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "consistent1",
+          "consistent2",
+          "irr3",
+          "irr4",
+          "irr5",
+          "erratic",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr1",
+          "irr9",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "combsum_calibrated",
+    "description": "CombSUM is effective when both retrievers have calibrated scores.",
+    "insight": "With calibrated scores, sum directly reflects combined confidence.",
+    "expected_winner": "combsum",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr1",
+          "irr3",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "uncertain1",
+          "uncertain2",
+          "irr1",
+          "irr3",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "irr1",
+          "irr2",
+          "uncertain1",
+          "irr3",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "uncertain1",
+          "uncertain2",
+          "irr1",
+          "irr3",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr3",
+          "irr1",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "uncertain2",
+          "uncertain1",
+          "irr1",
+          "irr3",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "rrf_deep_overlap",
+    "description": "RRF k=60 makes overlap dominate even for deep-ranked docs.",
+    "insight": "1/(60+r) varies only 10% between r=1 and r=5. Overlap = 2× contribution.",
+    "expected_winner": "rrf",
+    "actual_winner": "rrf",
+    "correct": true,
+    "methods": {
+      "standardized": {
+        "ranking": [
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr3",
+          "irr7",
+          "irr8",
+          "rel1",
+          "irr4",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.125,
+          "ndcg_at_5": -0.0,
+          "ndcg_at_10": 0.3706656904013186,
+          "average_precision": 0.1625
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr7",
+          "irr3",
+          "irr8",
+          "rel1",
+          "irr4",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.125,
+          "ndcg_at_5": -0.0,
+          "ndcg_at_10": 0.3706656904013186,
+          "average_precision": 0.1625
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr1",
+          "irr2",
+          "irr3",
+          "irr4",
+          "irr8",
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.1111111111111111,
+          "ndcg_at_5": -0.0,
+          "ndcg_at_10": 0.36181498356361597,
+          "average_precision": 0.15555555555555556
+        }
+      },
+      "isr": {
+        "ranking": [
+          "irr5",
+          "irr1",
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr6",
+          "irr3",
+          "irr7",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_5": 0.5706417189553201,
+          "ndcg_at_10": 0.5706417189553201,
+          "average_precision": 0.41666666666666663
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr3",
+          "irr7",
+          "rel2",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.5,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.6131471927654584,
+          "ndcg_at_10": 0.8065735963827293,
+          "average_precision": 0.625
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "irr1",
+          "irr2",
+          "irr3",
+          "rel1",
+          "irr5",
+          "irr6",
+          "irr7",
+          "rel2",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.5,
+          "recall_at_10": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_5": 0.2640681225725909,
+          "ndcg_at_10": 0.45749452618986164,
+          "average_precision": 0.25
+        }
+      },
+      "borda": {
+        "ranking": [
+          "irr5",
+          "irr1",
+          "rel1",
+          "irr6",
+          "irr2",
+          "irr3",
+          "irr7",
+          "rel2",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.5,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_5": 0.3065735963827292,
+          "ndcg_at_10": 0.5,
+          "average_precision": 0.29166666666666663
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr3",
+          "irr7",
+          "irr8",
+          "rel1",
+          "irr4",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.125,
+          "ndcg_at_5": -0.0,
+          "ndcg_at_10": 0.3706656904013186,
+          "average_precision": 0.1625
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "irr1",
+          "irr2",
+          "irr3",
+          "rel1",
+          "rel2",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.25,
+          "ndcg_at_5": 0.5012658353418871,
+          "ndcg_at_10": 0.5012658353418871,
+          "average_precision": 0.325
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "irr5",
+          "irr1",
+          "irr2",
+          "irr6",
+          "rel1",
+          "irr7",
+          "irr3",
+          "irr8",
+          "rel2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.5,
+          "recall_at_10": 1.0,
+          "mrr": 0.2,
+          "ndcg_at_5": 0.23719771276929622,
+          "ndcg_at_10": 0.42177340954886444,
+          "average_precision": 0.2111111111111111
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr7",
+          "irr3",
+          "irr8",
+          "rel1",
+          "irr4",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.2,
+          "recall_at_5": 0.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.125,
+          "ndcg_at_5": -0.0,
+          "ndcg_at_10": 0.3706656904013186,
+          "average_precision": 0.1625
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr3",
+          "irr7",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "graceful_empty",
+    "description": "All methods handle empty input gracefully.",
+    "insight": "Edge case: empty list should not cause errors or distort ranking.",
+    "expected_winner": "all_equal",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "disagreement_interleave",
+    "description": "When retrievers disagree completely, need fair interleaving.",
+    "insight": "With disjoint results, all methods must interleave somehow.",
+    "expected_winner": "all_equal",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "weighted_0.7": {
+        "ranking": [
+          "rel_a",
+          "irr1",
+          "irr2",
+          "rel_b",
+          "irr5",
+          "irr3",
+          "irr6",
+          "irr7",
+          "irr4",
+          "irr8"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8772153153380493,
+          "ndcg_at_10": 0.8772153153380493,
+          "average_precision": 0.75
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel_a",
+          "rel_b",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr3",
+          "irr7",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel_b",
+          "rel_a",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr7",
+          "irr3",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel_a",
+          "rel_b",
+          "irr5",
+          "irr1",
+          "irr2",
+          "irr6",
+          "irr7",
+          "irr3",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel_b",
+          "irr5",
+          "rel_a",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr3",
+          "irr4",
+          "irr7",
+          "irr8"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel_a",
+          "rel_b",
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr3",
+          "irr7",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel_b",
+          "rel_a",
+          "irr1",
+          "irr5",
+          "irr6",
+          "irr2",
+          "irr3",
+          "irr7",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel_a",
+          "irr1",
+          "irr2",
+          "irr3",
+          "rel_b",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.8503449055347546,
+          "ndcg_at_10": 0.8503449055347546,
+          "average_precision": 0.7
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel_b",
+          "rel_a",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr7",
+          "irr3",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel_a",
+          "rel_b",
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr6",
+          "irr3",
+          "irr7",
+          "irr4",
+          "irr8"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel_b",
+          "rel_a",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr7",
+          "irr3",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel_b",
+          "rel_a",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr7",
+          "irr3",
+          "irr8",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "dbsf_distribution_mismatch",
+    "description": "DBSF z-score helps align genuinely different distributions.",
+    "insight": "Z-score: (x - mean) / std. Aligns distributions with different means/variances.",
+    "expected_winner": "dbsf",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr2",
+          "irr3",
+          "irr5",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "irr1",
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr4",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "irr1",
+          "rel2",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "irr1",
+          "rel2",
+          "irr2",
+          "irr4",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "isr_steeper_decay",
+    "description": "ISR's steeper decay (k=1) emphasizes top ranks in disjoint lists.",
+    "insight": "ISR with k=1: 1/sqrt(1+0)=1.0 at rank 0 vs 1/sqrt(1+4)=0.447 at rank 4. Much steeper than RRF's 1/(60+r). rel1 at rank 0 should dominate.",
+    "expected_winner": "isr",
+    "actual_winner": "borda",
+    "correct": true,
+    "methods": {
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "irr5",
+          "rel1",
+          "irr6",
+          "irr1",
+          "irr7",
+          "irr2",
+          "irr8",
+          "irr3",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6309297535714575,
+          "ndcg_at_10": 0.6309297535714575,
+          "average_precision": 0.5
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "irr5",
+          "rel1",
+          "irr6",
+          "irr1",
+          "irr7",
+          "irr2",
+          "irr8",
+          "irr3",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6309297535714575,
+          "ndcg_at_10": 0.6309297535714575,
+          "average_precision": 0.5
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "irr1",
+          "irr2",
+          "irr5",
+          "irr6",
+          "irr3",
+          "irr7",
+          "irr8",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "irr5",
+          "rel1",
+          "irr1",
+          "irr6",
+          "irr7",
+          "irr2",
+          "irr3",
+          "irr8",
+          "irr4",
+          "irr9"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6309297535714575,
+          "ndcg_at_10": 0.6309297535714575,
+          "average_precision": 0.5
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "irr5",
+          "irr6",
+          "rel1",
+          "irr1",
+          "irr7",
+          "irr2",
+          "irr3",
+          "irr4",
+          "irr8",
+          "irr9"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333,
+          "ndcg_at_5": 0.5,
+          "ndcg_at_10": 0.5,
+          "average_precision": 0.3333333333333333
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr7",
+          "irr2",
+          "irr3",
+          "irr8",
+          "irr4",
+          "irr9"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "irr1",
+          "irr2",
+          "irr3",
+          "irr5",
+          "irr6",
+          "irr7",
+          "irr8",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr7",
+          "irr3",
+          "irr8",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "irr5",
+          "rel1",
+          "irr6",
+          "irr1",
+          "irr7",
+          "irr2",
+          "irr8",
+          "irr3",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6309297535714575,
+          "ndcg_at_10": 0.6309297535714575,
+          "average_precision": 0.5
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "irr5",
+          "rel1",
+          "irr6",
+          "irr1",
+          "irr7",
+          "irr2",
+          "irr8",
+          "irr3",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6309297535714575,
+          "ndcg_at_10": 0.6309297535714575,
+          "average_precision": 0.5
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "irr5",
+          "irr1",
+          "irr6",
+          "irr2",
+          "irr7",
+          "irr3",
+          "irr8",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "irr5",
+          "irr6",
+          "irr1",
+          "irr7",
+          "irr2",
+          "irr3",
+          "irr8",
+          "irr9",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "standardized_distribution_mismatch",
+    "description": "Standardized fusion (z-score) outperforms CombSUM when distributions differ.",
+    "insight": "Z-score normalization (standardization) is more robust to distribution differences than min-max. ERANK shows 2-5% NDCG improvement.",
+    "expected_winner": "standardized",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "irr1",
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr4",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "irr1",
+          "rel2",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "irr1",
+          "rel2",
+          "irr2",
+          "irr4",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr2",
+          "irr3",
+          "irr5",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "standardized_tight_clipping",
+    "description": "Tight clipping range helps when moderate outliers exist.",
+    "insight": "Tighter clipping [-2, 2] vs [-3, 3] reduces outlier influence. With balanced lists (not dominated by one), tight clipping should outperform methods without clipping.",
+    "expected_winner": "standardized_tight",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "weighted_0.7": {
+        "ranking": [
+          "outlier",
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "outlier",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "outlier",
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3",
+          "irr4",
+          "outlier"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "additive_multi_task_ecommerce",
+    "description": "Additive multi-task fusion (ResFlow) for e-commerce ranking.",
+    "insight": "ResFlow: additive fusion (CTR + CTCVR × 20) outperforms multiplicative for e-commerce. Task B (CTCVR) gets 20× weight.",
+    "expected_winner": "additive_multi_task_1_20",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "weighted_0.7": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item4",
+          "item3",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item3",
+          "item4",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item3",
+          "item4",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item4",
+          "item3",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item4",
+          "item3",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "item2",
+          "item3",
+          "item4",
+          "item1",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item4",
+          "item3",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item4",
+          "item3",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item3",
+          "item4",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item4",
+          "item3",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item4",
+          "item3",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "item2",
+          "item1",
+          "item4",
+          "item3",
+          "item5"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "additive_equal_weights",
+    "description": "Equal-weight additive fusion when both tasks matter equally.",
+    "insight": "Equal weights (1.0, 1.0) when both tasks contribute equally to final ranking.",
+    "expected_winner": "additive_multi_task_1_1",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr4",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr2",
+          "irr3",
+          "irr5",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr4",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "standardized_vs_dbsf",
+    "description": "Standardized fusion with custom clipping vs fixed DBSF.",
+    "insight": "Standardized allows configurable clipping range, making it more flexible than DBSF's fixed [-3, 3].",
+    "expected_winner": "standardized",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr4",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr2",
+          "irr3",
+          "irr5",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr1",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr4",
+          "irr2",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr4",
+          "irr5",
+          "irr2",
+          "irr3",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr4",
+          "irr5",
+          "irr3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "standardized_negative_scores",
+    "description": "Standardized fusion handles negative scores naturally.",
+    "insight": "Z-score normalization works with any score distribution, including negative values.",
+    "expected_winner": "standardized",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr1",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr1",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr1",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr1",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr3",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr3",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr1",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr3",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr3",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr1",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr1",
+          "irr2",
+          "irr4"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "additive_extreme_weights",
+    "description": "Additive fusion with extreme weight ratios (1:100).",
+    "insight": "Extreme weights should still produce valid rankings. Task B dominates.",
+    "expected_winner": "additive_multi_task_1_20",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "standardized_single_element",
+    "description": "Standardized fusion handles single-element lists gracefully.",
+    "insight": "Single-element lists have zero variance. Z-score = 0, but fusion still works.",
+    "expected_winner": "standardized",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.2,
+          "precision_at_10": 0.1,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "additive_disjoint_tasks",
+    "description": "Additive fusion when tasks have disjoint document sets.",
+    "insight": "Disjoint tasks should interleave documents fairly.",
+    "expected_winner": "additive_multi_task_1_1",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "isr": {
+        "ranking": [
+          "rel_a1",
+          "rel_b1",
+          "rel_a2",
+          "rel_b2",
+          "irr_a1",
+          "irr_b1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel_a1",
+          "rel_b1",
+          "rel_a2",
+          "rel_b2",
+          "irr_a1",
+          "irr_b1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel_a1",
+          "rel_b1",
+          "rel_b2",
+          "rel_a2",
+          "irr_b1",
+          "irr_a1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel_b1",
+          "rel_a1",
+          "rel_a2",
+          "rel_b2",
+          "irr_a1",
+          "irr_b1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel_b1",
+          "rel_a1",
+          "rel_b2",
+          "rel_a2",
+          "irr_b1",
+          "irr_a1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel_b1",
+          "rel_a1",
+          "rel_b2",
+          "rel_a2",
+          "irr_b1",
+          "irr_a1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel_a1",
+          "rel_b1",
+          "rel_b2",
+          "rel_a2",
+          "irr_a1",
+          "irr_b1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel_a1",
+          "rel_a2",
+          "rel_b1",
+          "rel_b2",
+          "irr_a1",
+          "irr_b1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel_a1",
+          "rel_a2",
+          "rel_b1",
+          "rel_b2",
+          "irr_a1",
+          "irr_b1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel_b1",
+          "rel_a1",
+          "rel_b2",
+          "rel_a2",
+          "irr_b1",
+          "irr_a1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel_b1",
+          "rel_a1",
+          "rel_a2",
+          "rel_b2",
+          "irr_b1",
+          "irr_a1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel_b1",
+          "rel_a1",
+          "rel_b2",
+          "rel_a2",
+          "irr_a1",
+          "irr_b1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.8,
+          "precision_at_10": 0.4,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "standardized_outlier_robustness",
+    "description": "Standardized fusion is more robust to outliers than CombSUM.",
+    "insight": "Z-score normalization with clipping reduces outlier influence compared to min-max. With balanced lists and outliers that clip, standardized should outperform methods without clipping.",
+    "expected_winner": "standardized",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "weighted_0.7": {
+        "ranking": [
+          "outlier",
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr1",
+          "irr4",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2",
+          "irr3",
+          "irr4",
+          "outlier"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "outlier",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "outlier",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "outlier",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "outlier",
+          "rel1",
+          "rel2",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 0.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.5,
+          "ndcg_at_5": 0.6934264036172708,
+          "ndcg_at_10": 0.6934264036172708,
+          "average_precision": 0.5833333333333333
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "outlier",
+          "irr3",
+          "irr4",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "additive_normalization_matters",
+    "description": "Normalization method affects additive multi-task fusion results.",
+    "insight": "Z-score normalization (default) handles different distributions better than min-max. With equal weights, rel1 should win.",
+    "expected_winner": "additive_multi_task_1_1",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "irr1",
+          "rel2",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 0.9197207891481876,
+          "ndcg_at_10": 0.9197207891481876,
+          "average_precision": 0.8333333333333333
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr1",
+          "irr2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2",
+          "irr2",
+          "irr1"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "standardized_many_lists",
+    "description": "Standardized fusion scales to many input lists.",
+    "insight": "Z-score normalization works efficiently with many lists.",
+    "expected_winner": "standardized",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "rrf": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combmnz": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "rel1",
+          "rel2"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  },
+  {
+    "name": "additive_ecommerce_funnel",
+    "description": "E-commerce funnel: view, click, add-to-cart, purchase.",
+    "insight": "ResFlow shows additive fusion works well for e-commerce multi-task ranking.",
+    "expected_winner": "additive_multi_task_1_20",
+    "actual_winner": "additive_multi_task_1_1",
+    "correct": true,
+    "methods": {
+      "combmnz": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "borda": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_1": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "isr": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.9": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "weighted_0.7": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "rrf": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized_tight": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "combsum": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "additive_multi_task_1_20": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "dbsf": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      },
+      "standardized": {
+        "ranking": [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        "metrics": {
+          "precision_at_1": 1.0,
+          "precision_at_5": 0.4,
+          "precision_at_10": 0.2,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_5": 1.0,
+          "ndcg_at_10": 1.0,
+          "average_precision": 1.0
+        }
+      }
+    }
+  }
+]

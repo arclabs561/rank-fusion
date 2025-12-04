@@ -125,5 +125,51 @@ fn bench_edge_cases(c: &mut Criterion) {
     g.finish();
 }
 
-criterion_group!(benches, bench_algorithms, bench_multi, bench_edge_cases);
+fn bench_standardized(c: &mut Criterion) {
+    use rank_fusion::standardized;
+
+    let mut g = c.benchmark_group("standardized");
+
+    for &n in &[100, 1000] {
+        let a = ranked(n, "a");
+        let b = with_overlap(ranked(n, "b"), n, 0.3);
+
+        g.bench_with_input(BenchmarkId::new("standardized", n), &n, |bench, _| {
+            bench.iter(|| black_box(standardized(&a, &b)));
+        });
+    }
+
+    g.finish();
+}
+
+fn bench_additive_multi_task(c: &mut Criterion) {
+    use rank_fusion::{additive_multi_task_with_config, AdditiveMultiTaskConfig};
+
+    let mut g = c.benchmark_group("additive_multi_task");
+
+    for &n in &[100, 1000] {
+        let a = ranked(n, "a");
+        let b = with_overlap(ranked(n, "b"), n, 0.3);
+        let config = AdditiveMultiTaskConfig::new((1.0, 1.0));
+
+        g.bench_with_input(
+            BenchmarkId::new("additive_multi_task", n),
+            &n,
+            |bench, _| {
+                bench.iter(|| black_box(additive_multi_task_with_config(&a, &b, config)));
+            },
+        );
+    }
+
+    g.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_algorithms,
+    bench_multi,
+    bench_edge_cases,
+    bench_standardized,
+    bench_additive_multi_task
+);
 criterion_main!(benches);

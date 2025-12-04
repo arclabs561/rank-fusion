@@ -1,6 +1,6 @@
 # rank-fusion
 
-Combine ranked lists from multiple retrievers. Provides RRF, CombMNZ, Borda, DBSF, RBC, Condorcet, and 10+ fusion algorithms with full explainability, hyperparameter optimization, and IR metrics. Zero dependencies.
+Combine ranked lists from multiple retrievers. Provides RRF, ISR, CombMNZ, Borda, DBSF, Standardized, Additive Multi-Task, and 10+ fusion algorithms with full explainability and validation utilities. Zero dependencies.
 
 ## Python Bindings
 
@@ -21,13 +21,13 @@ Hybrid search combines multiple retrievers (BM25, dense embeddings, sparse vecto
 **Problem**: Different retrievers use incompatible score scales. BM25 might score 0-100, while dense embeddings score 0-1. Normalization is fragile and requires tuning.
 
 **RRF (Reciprocal Rank Fusion)**: Ignores scores and uses only rank positions. The formula `1/(k + rank)` ensures:
-- Top positions dominate (rank 0 gets 1/60 = 0.017, rank 5 gets 1/65 = 0.015)
+- Top positions dominate (rank 0 gets 1/60 = 0.016667, rank 5 gets 1/65 = 0.015385)
 - Multiple list agreement is rewarded (documents appearing in both lists score higher)
 - No normalization needed (works with any score distribution)
 
 **Example**: Document "d2" appears at rank 0 in BM25 list and rank 1 in dense list:
-- RRF score = 1/(60+0) + 1/(60+1) = 0.0167 + 0.0164 = 0.0331
-- This beats "d1" (only in BM25 at rank 0: 0.0167) and "d3" (only in dense at rank 1: 0.0164)
+- RRF score = 1/(60+0) + 1/(60+1) = 0.016667 + 0.016393 = 0.033060
+- This beats "d1" (only in BM25 at rank 0: 0.016667) and "d3" (only in dense at rank 1: 0.016393)
 
 RRF finds consensus across retrievers. No normalization needed, works with any score distribution.
 
@@ -35,18 +35,28 @@ RRF finds consensus across retrievers. No normalization needed, works with any s
 
 Fusion algorithms for hybrid search:
 
-| Scenario | Algorithm |
-|----------|-----------|
-| BM25 + dense embeddings | `rrf` (rank-based) |
-| Variable-length lists | `rbc` (Rank-Biased Centroids) |
-| Multiple retrievers, different scales | `rrf_multi` |
-| Same-scale scores | `combsum`, `combmnz` |
-| Trust one retriever more | `weighted`, `rrf_weighted` |
-| Different distributions | `dbsf` (z-score) |
-| Robust to outliers | `condorcet`, `combmed` |
-| Baselines | `combmax`, `combanz` |
+| Scenario | Algorithm | Time Complexity | Best For |
+|----------|-----------|-----------------|----------|
+| BM25 + dense embeddings | `rrf` (rank-based) | O(n log n) | Incompatible score scales |
+| Variable-length lists | `rbc` (Rank-Biased Centroids) | O(n log n) | Lists of different lengths |
+| Multiple retrievers, different scales | `rrf_multi` | O(n log n) | 3+ retrievers, different scales |
+| Same-scale scores | `combsum`, `combmnz` | O(n log n) | Compatible score scales |
+| Trust one retriever more | `weighted`, `rrf_weighted` | O(n log n) | Domain knowledge about reliability |
+| Different distributions | `dbsf`, `standardized` (z-score) | O(n log n) | Score distributions differ |
+| Multi-task ranking (e-commerce) | `additive_multi_task` (ResFlow-style) | O(n×m) | CTR + CTCVR, multiple tasks |
+| Robust to outliers | `combmed` (median) | O(n log n) | Outlier-resistant fusion |
+| Baselines | `combmax`, `combanz` | O(n log n) | Comparison baselines |
 
 **What this is NOT**: embedding generation, vector search, or scoring embeddings. See [rank-refine](https://crates.io/crates/rank-refine) for scoring embeddings.
+
+## Getting Started
+
+New to rank-fusion? Start with the [Getting Started Guide](GETTING_STARTED.md) for:
+- Complete RAG pipeline examples
+- Hybrid search integration
+- E-commerce multi-task ranking
+- Python integration
+- Debugging with explainability
 
 ## Usage
 
@@ -57,7 +67,8 @@ let bm25 = vec![("d1", 12.5), ("d2", 11.0)];
 let dense = vec![("d2", 0.9), ("d3", 0.8)];
 
 let fused = rrf(&bm25, &dense);
-// [("d2", 0.033), ("d1", 0.016), ("d3", 0.016)]
+// Result: [("d2", 0.033060), ("d1", 0.016667), ("d3", 0.016393)]
+// d2 ranks highest (appears in both lists)
 ```
 
 ### Realistic Example
@@ -83,34 +94,41 @@ let dense_results = vec![
 
 // RRF finds consensus: doc_456 appears high in both lists
 let fused = rrf(&bm25_results, &dense_results);
-// doc_456 wins (rank 1 in BM25, rank 0 in dense)
-// doc_123 second (rank 0 in BM25, rank 1 in dense)
-// doc_789 third (rank 2 in BM25, not in dense top-50)
-```
+// Result: doc_456 wins (rank 1 in BM25, rank 0 in dense)
+//         doc_123 second (rank 0 in BM25, rank 1 in dense)
+//         doc_789 third (rank 2 in BM25, not in dense top-50)
 
 ## API
 
 ### Rank-based (ignores scores)
 
-| Function | Formula | Use |
-|----------|---------|-----|
-| `rrf(a, b)` | 1/(k + rank) | Different scales |
-| `isr(a, b)` | 1/√(k + rank) | Lower ranks matter more |
-| `borda(a, b)` | N - rank | Simple voting |
-| `rbc(a, b)` | (1-p)^rank / (1-p^N) | Variable-length lists |
-| `condorcet(a, b)` | Pairwise voting | Robust to outliers |
+| Function | Formula | Use | Config Type |
+|----------|---------|-----|-------------|
+| `rrf(a, b)` | 1/(k + rank) | Different scales | `RrfConfig` (k=60 default) |
+| `rrf_multi(lists)` | 1/(k + rank) | Multiple lists, different scales | `RrfConfig` |
+| `isr(a, b)` | 1/√(k + rank) | Lower ranks matter more | `RrfConfig` (k=1 default) |
+| `isr_multi(lists)` | 1/√(k + rank) | Multiple lists, lower ranks matter | `RrfConfig` |
+| `borda(a, b)` | N - rank | Simple voting | `FusionConfig` |
+| `borda_multi(lists)` | N - rank | Multiple lists, simple voting | `FusionConfig` |
+| `rrf_weighted(lists, weights)` | Σ w_i/(k + rank) | Per-retriever weights | `RrfConfig` (returns `Result<T, FusionError>`) |
 
 ### Score-based
 
-| Function | Formula | Use |
-|----------|---------|-----|
-| `combsum(a, b)` | Σ scores | Same scale |
-| `combmnz(a, b)` | sum × count | Reward overlap |
-| `dbsf(a, b)` | z-score | Different distributions |
-| `weighted(a, b, config)` | weighted sum | Custom weights |
-| `combmax(a, b)` | max(scores) | Baseline, favor high scores |
-| `combmed(a, b)` | median(scores) | Robust to outliers |
-| `combanz(a, b)` | mean(scores) | Average instead of sum |
+| Function | Formula | Use | Config Type |
+|----------|---------|-----|-------------|
+| `combsum(a, b)` | Σ scores | Same scale | `FusionConfig` |
+| `combsum_multi(lists)` | Σ scores | Multiple lists, same scale | `FusionConfig` |
+| `combmnz(a, b)` | sum × count | Reward overlap | `FusionConfig` |
+| `combmnz_multi(lists)` | sum × count | Multiple lists, reward overlap | `FusionConfig` |
+| `dbsf(a, b)` | z-score | Different distributions | `FusionConfig` |
+| `dbsf_multi(lists)` | z-score | Multiple lists, different distributions | `FusionConfig` |
+| `standardized(a, b)` | z-score (clip [-3,3]) | ERANK-style, robust to outliers | Default config |
+| `standardized_with_config(a, b, config)` | z-score (configurable clip) | ERANK-style, custom clipping | `StandardizedConfig` |
+| `standardized_multi(lists, config)` | z-score (configurable clip) | Multiple lists, ERANK-style | `StandardizedConfig` |
+| `additive_multi_task(a, b, config)` | α·A + β·B | ResFlow-style, e-commerce ranking | `AdditiveMultiTaskConfig` |
+| `additive_multi_task_multi(weighted_lists, config)` | Σ w_i·score_i | Multiple tasks with weights | `AdditiveMultiTaskConfig` |
+| `weighted(a, b, config)` | weighted sum | Custom weights | `WeightedConfig` |
+| `weighted_multi(weighted_lists, normalize, top_k)` | weighted sum | Multiple lists with weights | Direct params |
 
 ### Multi-list
 
@@ -126,15 +144,19 @@ let fused = rrf_multi(&lists, RrfConfig::default());
 ### Weighted RRF
 
 ```rust
-use rank_fusion::rrf_weighted;
+use rank_fusion::{rrf_weighted, RrfConfig};
 
+let lists = vec![&bm25[..], &dense[..], &sparse[..]];
 let weights = [1.0, 2.0, 0.5];  // per-retriever
+let config = RrfConfig::default();
 let fused = rrf_weighted(&lists, &weights, config)?;
 ```
 
+**Note**: `rrf_weighted()` returns `Result<T, FusionError>` - it can error if weights sum to zero or if `lists.len() != weights.len()`.
+
 ### Explainability
 
-Debug and analyze fusion results with full provenance:
+Debug and analyze fusion results with full provenance. See [`examples/explainability.rs`](examples/explainability.rs) for a complete example.
 
 ```rust
 use rank_fusion::explain::{rrf_explain, analyze_consensus, attribute_top_k, RetrieverId};
@@ -181,7 +203,18 @@ for (retriever, stats) in &attribution {
 }
 ```
 
-See [`examples/explainability.rs`](examples/explainability.rs) for a complete example.
+**Available examples:**
+- [`examples/explainability.rs`](examples/explainability.rs) - Debugging with explainability
+- [`examples/hybrid_search.rs`](examples/hybrid_search.rs) - Hybrid search integration
+- [`examples/rag_pipeline.rs`](examples/rag_pipeline.rs) - Complete RAG pipeline
+- [`examples/real_world_elasticsearch.rs`](examples/real_world_elasticsearch.rs) - Elasticsearch + Vector DB fusion
+- [`examples/real_world_ecommerce.rs`](examples/real_world_ecommerce.rs) - E-commerce multi-task ranking
+- [`examples/batch_processing.rs`](examples/batch_processing.rs) - High-throughput batch processing
+- [`examples/standardized_fusion.rs`](examples/standardized_fusion.rs) - Standardized fusion usage
+- [`examples/additive_multi_task.rs`](examples/additive_multi_task.rs) - Additive multi-task fusion
+- [`examples/webassembly.rs`](examples/webassembly.rs) - WASM bindings usage
+
+Run examples with: `cargo run --example <name>`
 
 ## Formulas
 
@@ -233,9 +266,9 @@ rank 1: d2 (11.0)  rank 1: d3 (0.8)
 rank 2: d3 (10.5)  rank 2: d1 (0.7)
 
 RRF scores (k=60):
-d1: 1/(60+0) + 1/(60+2) = 0.0167 + 0.0161 = 0.0328
-d2: 1/(60+1) + 1/(60+0) = 0.0164 + 0.0167 = 0.0331 (wins)
-d3: 1/(60+2) + 1/(60+1) = 0.0161 + 0.0164 = 0.0325
+d1: 1/(60+0) + 1/(60+2) = 0.016667 + 0.016129 = 0.032796
+d2: 1/(60+1) + 1/(60+0) = 0.016393 + 0.016667 = 0.033060 (wins)
+d3: 1/(60+2) + 1/(60+1) = 0.016129 + 0.016393 = 0.032522
 
 Final ranking: [d2, d1, d3]
 ```
@@ -297,16 +330,30 @@ Use DBSF when score distributions differ significantly between retrievers.
 
 Measured on Apple M3 Max with `cargo bench`:
 
-| Operation | Items | Time |
-|-----------|-------|------|
-| `rrf` | 100 | 13μs |
-| `rrf` | 1000 | 159μs |
-| `combsum` | 100 | 14μs |
-| `combmnz` | 100 | 13μs |
-| `borda` | 100 | 13μs |
-| `rrf_multi` (5 lists) | 100 | 38μs |
+| Operation | Items | Time | Notes |
+|-----------|-------|------|-------|
+| `rrf` | 100 | 13μs | Default k=60 |
+| `rrf` | 1000 | 159μs | Linear scaling |
+| `combsum` | 100 | 14μs | Simple score addition |
+| `combmnz` | 100 | 13μs | CombSUM with overlap multiplier |
+| `borda` | 100 | 13μs | Rank-based scoring |
+| `rrf_multi` (5 lists) | 100 | 38μs | Efficient aggregation |
+| `standardized` | 100 | 14μs | Z-score normalization |
+| `additive_multi_task` | 100 | 20μs | With minmax normalization |
 
-These timings are suitable for real-time fusion of 100-1000 item lists.
+**Performance characteristics:**
+- All methods scale linearly with number of unique documents
+- Time complexity: O(n log n) where n = unique documents (dominated by final sort)
+- Memory: ~32 bytes per document (ID + score)
+- Suitable for real-time fusion of 100-1000 item lists
+
+**Why these timings?**
+- RRF/ISR/Borda: Fast because they only use rank positions (no score normalization)
+- CombSUM/CombMNZ: Slightly slower due to min-max normalization overhead
+- Standardized: Z-score normalization adds minimal overhead (~1μs)
+- Additive Multi-Task: Normalization overhead increases with number of lists
+
+For detailed performance analysis, optimization tips, and scalability information, see [PERFORMANCE.md](PERFORMANCE.md).
 
 ## Vendoring
 
@@ -323,14 +370,27 @@ Start here: Do your retrievers use compatible score scales?
 ```
 ├─ No (BM25: 0-100, dense: 0-1) → Use rank-based
 │  ├─ Need strong consensus? → RRF (k=60)
-│  └─ Lower ranks still valuable? → ISR (k=1)
+│  ├─ Lower ranks still valuable? → ISR (k=1)
+│  └─ Simple voting? → Borda
 │
 └─ Yes (both 0-1, both cosine similarity) → Use score-based
    ├─ Want to reward overlap? → CombMNZ
    ├─ Simple sum? → CombSUM
-   ├─ Different distributions? → DBSF (z-score normalization)
-   └─ Trust one retriever more? → Weighted
+   ├─ Different distributions? → DBSF or standardized (z-score normalization)
+   ├─ Trust one retriever more? → Weighted
+   ├─ Multi-task ranking (e-commerce)? → Additive Multi-Task
+   └─ Need outlier robustness? → Standardized (with clipping)
 ```
+
+### Function to Config Type Mapping
+
+| Function | Config Type | Notes |
+|----------|------------|-------|
+| `rrf()`, `rrf_multi()`, `isr()`, `isr_multi()` | `RrfConfig` | k parameter (must be >= 1) |
+| `combsum()`, `combmnz()`, `borda()`, `dbsf()` | `FusionConfig` | top_k only |
+| `weighted()` | `WeightedConfig` | weights + normalize + top_k |
+| `standardized()` | `StandardizedConfig` | clip_range + top_k |
+| `additive_multi_task()` | `AdditiveMultiTaskConfig` | weights + normalization + top_k |
 
 **When RRF underperforms**:
 
@@ -342,6 +402,18 @@ RRF is typically 3-4% lower NDCG than CombSUM when score scales are compatible (
 - Score scales are unknown or incompatible
 - You want zero-configuration fusion
 - Robustness is more important than optimal quality
+
+**Use Standardized Fusion when**:
+- Score distributions differ significantly (e.g., BM25: 0-100, dense: -1 to 1)
+- You need configurable outlier handling (clipping range)
+- You have negative scores (z-score handles any distribution)
+- Based on ERANK paper showing 2-5% NDCG improvement
+
+**Use Additive Multi-Task Fusion when**:
+- Combining multiple ranking tasks (e.g., CTR + CTCVR in e-commerce)
+- Tasks have different scales but you know relative importance
+- You want ResFlow-style weighted additive fusion
+- Example: `AdditiveMultiTaskConfig::new((1.0, 20.0))` for 1:20 weight ratio
 
 **Use CombSUM when**:
 - Scores are on the same scale (both cosine, both BM25, etc.)
@@ -367,57 +439,76 @@ This is critical for debugging RAG pipelines: you can see if your expensive cros
 - Building user trust ("This answer came 60% from our docs, 40% from community forum")
 - Identifying index staleness or embedding drift
 
-See [`examples/explainability.rs`](examples/explainability.rs) for a complete example.
+For complete examples, see the [examples directory](examples/).
 
 ## Normalization
 
-Score normalization is now a first-class concern. Use `normalize_scores()` to explicitly control how scores are normalized before fusion:
+Score normalization is handled automatically by fusion methods, but you can control the normalization method when using configurable methods:
 
 ```rust
-use rank_fusion::{normalize_scores, Normalization};
+use rank_fusion::{additive_multi_task_with_config, AdditiveMultiTaskConfig, Normalization};
 
-let scores = vec![("d1", 10.0), ("d2", 5.0), ("d3", 0.0)];
+let ctr_scores = vec![("p1", 0.15), ("p2", 0.12)];
+let ctcvr_scores = vec![("p1", 0.08), ("p2", 0.06)];
 
 // Min-max normalization (default for CombSUM/CombMNZ)
-let normalized = normalize_scores(&scores, Normalization::MinMax);
+let config = AdditiveMultiTaskConfig::new((1.0, 20.0))
+    .with_normalization(Normalization::MinMax);
 
-// Z-score normalization (used by DBSF)
-let z_normalized = normalize_scores(&scores, Normalization::ZScore);
+// Z-score normalization (used by DBSF/standardized)
+let config_zscore = AdditiveMultiTaskConfig::new((1.0, 20.0))
+    .with_normalization(Normalization::ZScore);
 
 // Sum normalization (preserves relative magnitudes)
-let sum_normalized = normalize_scores(&scores, Normalization::Sum);
+let config_sum = AdditiveMultiTaskConfig::new((1.0, 20.0))
+    .with_normalization(Normalization::Sum);
 
 // Rank-based (ignores score magnitudes)
-let rank_normalized = normalize_scores(&scores, Normalization::Rank);
+let config_rank = AdditiveMultiTaskConfig::new((1.0, 20.0))
+    .with_normalization(Normalization::Rank);
+
+let fused = additive_multi_task_with_config(&ctr_scores, &ctcvr_scores, config);
 ```
+
+**Available normalization methods:**
+- `Normalization::MinMax` - Scales scores to [0, 1] (default for CombSUM/CombMNZ)
+- `Normalization::ZScore` - Standardizes using mean and std dev (used by DBSF/standardized)
+- `Normalization::Sum` - Divides by sum (preserves relative magnitudes)
+- `Normalization::Rank` - Converts to rank positions (ignores score magnitudes)
+- `Normalization::None` - No normalization (use raw scores)
 
 ## Runtime Strategy Selection
 
 Use the `FusionStrategy` enum for dynamic method selection:
 
 ```rust
-use rank_fusion::strategy::FusionStrategy;
+use rank_fusion::FusionStrategy;
 
 // Select method at runtime
 let method = if use_scores {
-    FusionStrategy::combsum()
+    FusionStrategy::CombSum
 } else {
-    FusionStrategy::rrf(60)
+    FusionStrategy::Rrf { k: 60 }
 };
 
 let result = method.fuse(&[&list1[..], &list2[..]]);
 println!("Using method: {}", method.name());
 ```
 
+**Available strategies**:
+- `FusionStrategy::Rrf { k }` - RRF with custom k
+- `FusionStrategy::CombSum` - CombSUM
+- `FusionStrategy::CombMnz` - CombMNZ
+- `FusionStrategy::Weighted { weights, normalize }` - Weighted fusion
+
 ## Hyperparameter Optimization
 
-Optimize fusion parameters using ground truth (qrels):
+**Note**: Hyperparameter optimization functionality may be available in future versions. For now, use manual tuning:
 
 ```rust
-use rank_fusion::optimize::{optimize_fusion, OptimizeConfig, OptimizeMetric, ParamGrid};
-use rank_fusion::FusionMethod;
+use rank_fusion::{rrf_with_config, RrfConfig, ndcg_at_k};
 
-// Relevance judgments
+// Relevance judgments (ground truth)
 let qrels = std::collections::HashMap::from([
     ("doc1", 2), // highly relevant
     ("doc2", 1), // relevant
@@ -429,17 +520,22 @@ let runs = vec![
     vec![("doc2", 0.9), ("doc1", 0.7)],
 ];
 
-// Optimize RRF k parameter
-let config = OptimizeConfig {
-    method: FusionMethod::Rrf { k: 60 },
-    metric: OptimizeMetric::Ndcg { k: 10 },
-    param_grid: ParamGrid::RrfK {
-        values: vec![20, 40, 60, 100],
-    },
-};
+// Try different k values
+let k_values = vec![20, 40, 60, 100];
+let mut best_k = 60;
+let mut best_ndcg = 0.0;
 
-let optimized = optimize_fusion(&qrels, &runs, config);
-println!("Best k: {}, NDCG@10: {:.4}", optimized.best_params, optimized.best_score);
+for k in k_values {
+    let config = RrfConfig::new(k);
+    let fused = rrf_with_config(&runs[0], &runs[1], config);
+    let ndcg = ndcg_at_k(&fused, &qrels, 10);
+    if ndcg > best_ndcg {
+        best_ndcg = ndcg;
+        best_k = k;
+    }
+}
+
+println!("Best k: {}, NDCG@10: {:.4}", best_k, best_ndcg);
 ```
 
 ## Evaluation Metrics
@@ -447,10 +543,10 @@ println!("Best k: {}, NDCG@10: {:.4}", optimized.best_params, optimized.best_sco
 The crate includes standard IR metrics for evaluation:
 
 ```rust
-use rank_fusion::{ndcg_at_k, mrr, recall_at_k};
+use rank_fusion::{ndcg_at_k, mrr, recall_at_k, Qrels};
 
 let results = vec![("d1", 1.0), ("d2", 0.9), ("d3", 0.8)];
-let qrels = std::collections::HashMap::from([
+let qrels: Qrels<&str> = std::collections::HashMap::from([
     ("d1", 2), // highly relevant
     ("d2", 1), // relevant
 ]);
@@ -460,9 +556,51 @@ let reciprocal_rank = mrr(&results, &qrels);
 let recall = recall_at_k(&results, &qrels, 10);
 ```
 
+**Available metrics:**
+- `ndcg_at_k()` - Normalized Discounted Cumulative Gain at k
+- `mrr()` - Mean Reciprocal Rank
+- `recall_at_k()` - Recall at k
+
+**Note**: For comprehensive evaluation with multiple queries and advanced metrics, see the `evals/` directory which includes full evaluation pipelines.
+
+## Result Validation
+
+Validate fusion results to ensure they meet expected properties:
+
+```rust
+use rank_fusion::validate::{validate, validate_sorted, validate_no_duplicates};
+
+let fused = rrf(&bm25_results, &dense_results);
+
+// Comprehensive validation
+// Parameters: (results, check_non_negative: bool, max_results: Option<usize>)
+let result = validate(&fused, false, Some(10));
+if !result.is_valid {
+    eprintln!("Validation errors: {:?}", result.errors);
+}
+if !result.warnings.is_empty() {
+    println!("Warnings: {:?}", result.warnings);
+}
+
+// Individual checks
+let sorted_check = validate_sorted(&fused);
+let dup_check = validate_no_duplicates(&fused);
+```
+
+Validation checks:
+- **Sorted**: Results are sorted by score (descending)
+- **No duplicates**: Each document ID appears only once
+- **Finite scores**: No NaN or Infinity values
+- **Non-negative** (optional): Warns on negative scores when `check_non_negative=true`
+- **Max results** (optional): Warns if result count exceeds `max_results`
+
+**Note**: The `validate()` function's second parameter is `check_non_negative: bool` (whether to check for negative scores), and the third parameter is `max_results: Option<usize>` (maximum expected result count, not score bounds).
+
 ## See Also
 
 - [rank-refine](https://crates.io/crates/rank-refine): score with embeddings (cosine, MaxSim)
+- [rank-relax](https://crates.io/crates/rank-relax): differentiable ranking for ML training (candle/burn)
+- [rank-eval](https://crates.io/crates/rank-eval): IR evaluation metrics and TREC format parsing
 - [DESIGN.md](DESIGN.md): algorithm details and edge cases
 
 ## License

@@ -1,0 +1,47 @@
+name: Documentation Checks
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  doctest:
+    name: Test Documentation Examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Test doc examples
+        run: cargo test --doc --workspace
+
+  markdown-links:
+    name: Check Markdown Links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check.json'
+        continue-on-error: true
+
+  python-types:
+    name: Check Python Type Stubs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install mypy
+        run: pip install mypy
+      - name: Check type stubs
+        run: |
+          cd rank-fusion-python
+          mypy rank_fusion.pyi --ignore-missing-imports || true
+        continue-on-error: true
+

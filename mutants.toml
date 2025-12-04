@@ -1,0 +1,19 @@
+# cargo-mutants configuration for rank-fusion
+# See https://mutants.rs/ for documentation
+
+# Exclude Python bindings from mutation testing (they're thin wrappers)
+exclude = [
+    "rank-fusion-python/**",
+]
+
+# Focus on core library
+include = [
+    "rank-fusion/src/**/*.rs",
+]
+
+# Timeout for each test run (seconds)
+timeout = 300
+
+# Number of parallel workers
+jobs = 4
+

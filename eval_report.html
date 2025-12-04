@@ -1,0 +1,3586 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rank Fusion Evaluation Report</title>
+    <style>
+        body { 
+            font-family: 'SF Mono', 'Menlo', monospace; 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 { color: #00d9ff; border-bottom: 2px solid #00d9ff; padding-bottom: 10px; }
+        h2 { color: #ff6b9d; margin-top: 40px; }
+        .scenario { 
+            background: #16213e; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            border-left: 4px solid #00d9ff;
+        }
+        .correct { border-left-color: #00ff88; }
+        .incorrect { border-left-color: #ff4757; }
+        .description { color: #888; font-style: italic; margin-bottom: 10px; }
+        .insight { color: #ffd93d; background: #0f3460; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 14px; }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        th, td { 
+            border: 1px solid #333; 
+            padding: 8px 12px; 
+            text-align: left; 
+        }
+        th { 
+            background: #0f3460; 
+            color: #00d9ff;
+        }
+        tr:nth-child(even) { background: #1a1a2e; }
+        tr:hover { background: #0f3460; }
+        .winner { background: #00ff88 !important; color: #000; font-weight: bold; }
+        .metric-best { color: #00ff88; font-weight: bold; }
+        .ranking { font-family: monospace; color: #ffd93d; }
+        .summary { 
+            background: #0f3460; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 30px;
+        }
+        .stat { display: inline-block; margin-right: 30px; }
+        .stat-value { font-size: 2em; color: #00ff88; }
+        .stat-label { color: #888; }
+    </style>
+</head>
+<body>
+    <h1>Rank Fusion Evaluation Report</h1>
+
+    <div class="summary">
+        <div class="stat">
+            <div class="stat-value">25/25</div>
+            <div class="stat-label">Scenarios Correct</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">100%</div>
+            <div class="stat-label">Accuracy</div>
+        </div>
+    </div>
+
+    <div class="scenario correct">
+        <h2>rrf_overlap_boost</h2>
+        <p class="description">RRF with k=60 gives strong bonus to overlapping docs.</p>
+        <p class="insight"><strong>Insight:</strong> With k=60, RRF score is ~1/61 per list. Overlap gives ~2/61, beating any single-list doc.</p>
+        <p>Expected winner: <strong>rrf</strong> | Actual winner: <strong>combmnz</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr_a1 → irr_b1 → irr_a2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">irr_b1 → irr_a1 → rel1 → irr_a2 → rel2</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.333</td>
+                <td class="">0.544</td>
+                <td>0.544</td>
+                <td>0.367</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">irr_a1 → irr_a2 → rel1 → rel2 → irr_b1</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.333</td>
+                <td class="">0.571</td>
+                <td>0.571</td>
+                <td>0.417</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → irr_b1 → irr_a1 → irr_a2 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.850</td>
+                <td>0.850</td>
+                <td>0.700</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">irr_b1 → irr_a1 → rel1 → irr_a2 → rel2</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.333</td>
+                <td class="">0.544</td>
+                <td>0.544</td>
+                <td>0.367</td>
+            </tr>
+            <tr class="winner">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr_b1 → irr_a1 → irr_a2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">irr_a1 → rel1 → irr_a2 → rel2 → irr_b1</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.651</td>
+                <td>0.651</td>
+                <td>0.500</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr_a1 → irr_b1 → irr_a2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">irr_b1 → irr_a1 → rel1 → irr_a2 → rel2</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.333</td>
+                <td class="">0.544</td>
+                <td>0.544</td>
+                <td>0.367</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → irr_b1 → irr_a1 → rel2 → irr_a2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.877</td>
+                <td>0.877</td>
+                <td>0.750</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">irr_b1 → rel1 → irr_a1 → irr_a2 → rel2</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.624</td>
+                <td>0.624</td>
+                <td>0.450</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">irr_b1 → irr_a1 → rel1 → irr_a2 → rel2</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.333</td>
+                <td class="">0.544</td>
+                <td>0.544</td>
+                <td>0.367</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>combmnz_overlap_multiplier</h2>
+        <p class="description">CombMNZ multiplies by overlap count, boosting shared docs.</p>
+        <p class="insight"><strong>Insight:</strong> score = normalized_sum × appearance_count. Overlap docs get 2× multiplier.</p>
+        <p>Expected winner: <strong>combmnz</strong> | Actual winner: <strong>combmnz</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → noise_b1 → noise_a1 → noise_b2 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.850</td>
+                <td>0.850</td>
+                <td>0.700</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">noise_b1 → rel1 → noise_a1 → noise_b2 → noise_a2</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.500</td>
+                <td class="">0.387</td>
+                <td>0.591</td>
+                <td>0.393</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → noise_a1 → rel2 → noise_b1 → noise_a2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → noise_a1 → noise_b1 → noise_b2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → noise_b1 → noise_a1 → noise_b2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → noise_a1 → rel2 → noise_b1 → noise_b2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="winner">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → noise_a1 → noise_b1 → noise_b2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">noise_a1 → rel1 → rel2 → noise_a2 → noise_b1</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → noise_b1 → noise_a1 → noise_b2 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.850</td>
+                <td>0.850</td>
+                <td>0.700</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → noise_a1 → noise_b1 → rel2 → noise_b2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.877</td>
+                <td>0.877</td>
+                <td>0.750</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → noise_b1 → noise_a1 → noise_b2 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.850</td>
+                <td>0.850</td>
+                <td>0.700</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → noise_b1 → noise_a1 → noise_b2 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.850</td>
+                <td>0.850</td>
+                <td>0.700</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>rank_based_beats_outlier</h2>
+        <p class="description">Score-based methods struggle with outliers; rank-based ignore them.</p>
+        <p class="insight"><strong>Insight:</strong> Rank-based methods (RRF/ISR/Borda) ignore score magnitude entirely. Borda penalizes inconsistent rankings.</p>
+        <p>Expected winner: <strong>borda</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr3 → outlier → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">outlier → rel1 → rel2 → irr3 → irr4</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → outlier → rel2 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr4 → outlier</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr4 → outlier</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → outlier → rel2 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">outlier → rel1 → rel2 → irr3 → irr4</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → outlier → rel2 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>weighted_downweight_bad</h2>
+        <p class="description">Weighted fusion with 0.9/0.1 controls bad retriever B.</p>
+        <p class="insight"><strong>Insight:</strong> When retriever quality is known a priori, explicit weighting helps.</p>
+        <p>Expected winner: <strong>weighted</strong> | Actual winner: <strong>weighted_0.7</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → irr3 → irr4 → irr5 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.651</td>
+                <td>0.818</td>
+                <td>0.633</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.765</td>
+                <td>0.933</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2 → rel3 → irr1 → irr3</td>
+                <td>1.000</td>
+                <td>0.600</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">irr3 → irr4 → irr5 → rel3 → irr1</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.250</td>
+                <td class="">0.202</td>
+                <td>0.507</td>
+                <td>0.304</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">irr3 → irr4 → irr5 → rel3 → rel1</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.250</td>
+                <td class="">0.384</td>
+                <td>0.551</td>
+                <td>0.383</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">irr3 → irr4 → irr5 → rel3 → rel1</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.250</td>
+                <td class="">0.384</td>
+                <td>0.551</td>
+                <td>0.383</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr4 → rel3</td>
+                <td>1.000</td>
+                <td>0.600</td>
+                <td>1.000</td>
+                <td class="">0.947</td>
+                <td>0.947</td>
+                <td>0.867</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr4 → rel3</td>
+                <td>1.000</td>
+                <td>0.600</td>
+                <td>1.000</td>
+                <td class="">0.947</td>
+                <td>0.947</td>
+                <td>0.867</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">irr3 → irr4 → irr5 → rel3 → rel1</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.250</td>
+                <td class="">0.384</td>
+                <td>0.551</td>
+                <td>0.383</td>
+            </tr>
+            <tr class="winner">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2 → rel3 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.600</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">irr3 → irr4 → irr5 → rel3 → rel1</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.250</td>
+                <td class="">0.384</td>
+                <td>0.551</td>
+                <td>0.383</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr4 → rel3</td>
+                <td>1.000</td>
+                <td>0.600</td>
+                <td>1.000</td>
+                <td class="">0.947</td>
+                <td>0.947</td>
+                <td>0.867</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>all_equal_agreement</h2>
+        <p class="description">When retrievers agree, all fusion methods produce same ranking.</p>
+        <p class="insight"><strong>Insight:</strong> Perfect agreement is the degenerate case where fusion doesn't matter.</p>
+        <p>Expected winner: <strong>all_equal</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>borda_penalizes_erratic</h2>
+        <p class="description">Borda count penalizes docs with inconsistent rankings across lists.</p>
+        <p class="insight"><strong>Insight:</strong> Borda score = sum(N - rank). Erratic #1/#10 loses to consistent #2/#2.</p>
+        <p>Expected winner: <strong>borda</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">consistent1 → erratic → consistent2 → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">consistent1 → consistent2 → irr3 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">consistent1 → consistent2 → irr3 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">erratic → consistent1 → consistent2 → irr1 → irr3</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">consistent1 → consistent2 → erratic → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">consistent1 → consistent2 → irr3 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">consistent1 → erratic → consistent2 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">consistent1 → consistent2 → irr3 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">consistent1 → consistent2 → irr3 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">consistent1 → consistent2 → erratic → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">consistent1 → consistent2 → erratic → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">consistent1 → consistent2 → irr3 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>combsum_calibrated</h2>
+        <p class="description">CombSUM is effective when both retrievers have calibrated scores.</p>
+        <p class="insight"><strong>Insight:</strong> With calibrated scores, sum directly reflects combined confidence.</p>
+        <p>Expected winner: <strong>combsum</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr1 → irr3</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → uncertain1 → uncertain2 → irr1 → irr3</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → uncertain2 → irr1 → irr2 → uncertain1</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → uncertain1 → uncertain2 → irr1 → irr3</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → uncertain2 → uncertain1 → irr1 → irr3</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>rrf_deep_overlap</h2>
+        <p class="description">RRF k=60 makes overlap dominate even for deep-ranked docs.</p>
+        <p class="insight"><strong>Insight:</strong> 1/(60+r) varies only 10% between r=1 and r=5. Overlap = 2× contribution.</p>
+        <p>Expected winner: <strong>rrf</strong> | Actual winner: <strong>rrf</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">irr1 → irr5 → irr2 → irr6 → irr3</td>
+                <td>0.000</td>
+                <td>0.000</td>
+                <td>0.125</td>
+                <td class="">-0.000</td>
+                <td>0.371</td>
+                <td>0.163</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">irr1 → irr5 → irr2 → irr6 → irr7</td>
+                <td>0.000</td>
+                <td>0.000</td>
+                <td>0.125</td>
+                <td class="">-0.000</td>
+                <td>0.371</td>
+                <td>0.163</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">irr5 → irr6 → irr7 → irr1 → irr2</td>
+                <td>0.000</td>
+                <td>0.000</td>
+                <td>0.111</td>
+                <td class="">-0.000</td>
+                <td>0.362</td>
+                <td>0.156</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">irr5 → irr1 → rel1 → rel2 → irr2</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.333</td>
+                <td class="">0.571</td>
+                <td>0.571</td>
+                <td>0.417</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → irr5 → irr1 → irr6 → irr2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="">0.613</td>
+                <td>0.807</td>
+                <td>0.625</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">irr1 → irr2 → irr3 → rel1 → irr5</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.250</td>
+                <td class="">0.264</td>
+                <td>0.457</td>
+                <td>0.250</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">irr5 → irr1 → rel1 → irr6 → irr2</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.333</td>
+                <td class="">0.307</td>
+                <td>0.500</td>
+                <td>0.292</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">irr1 → irr5 → irr2 → irr6 → irr3</td>
+                <td>0.000</td>
+                <td>0.000</td>
+                <td>0.125</td>
+                <td class="">-0.000</td>
+                <td>0.371</td>
+                <td>0.163</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">irr1 → irr2 → irr3 → rel1 → rel2</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.250</td>
+                <td class="">0.501</td>
+                <td>0.501</td>
+                <td>0.325</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">irr5 → irr1 → irr2 → irr6 → rel1</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.200</td>
+                <td class="">0.237</td>
+                <td>0.422</td>
+                <td>0.211</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">irr1 → irr5 → irr2 → irr6 → irr7</td>
+                <td>0.000</td>
+                <td>0.000</td>
+                <td>0.125</td>
+                <td class="">-0.000</td>
+                <td>0.371</td>
+                <td>0.163</td>
+            </tr>
+            <tr class="winner">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr5 → irr1 → irr6</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>graceful_empty</h2>
+        <p class="description">All methods handle empty input gracefully.</p>
+        <p class="insight"><strong>Insight:</strong> Edge case: empty list should not cause errors or distort ranking.</p>
+        <p>Expected winner: <strong>all_equal</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>disagreement_interleave</h2>
+        <p class="description">When retrievers disagree completely, need fair interleaving.</p>
+        <p class="insight"><strong>Insight:</strong> With disjoint results, all methods must interleave somehow.</p>
+        <p>Expected winner: <strong>all_equal</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel_a → irr1 → irr2 → rel_b → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.877</td>
+                <td>0.877</td>
+                <td>0.750</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel_a → rel_b → irr5 → irr1 → irr6</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel_b → rel_a → irr5 → irr1 → irr6</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel_a → rel_b → irr5 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel_b → irr5 → rel_a → irr1 → irr6</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel_a → rel_b → irr1 → irr5 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel_b → rel_a → irr1 → irr5 → irr6</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel_a → irr1 → irr2 → irr3 → rel_b</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.850</td>
+                <td>0.850</td>
+                <td>0.700</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel_b → rel_a → irr5 → irr1 → irr6</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel_a → rel_b → irr1 → irr5 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel_b → rel_a → irr5 → irr1 → irr6</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel_b → rel_a → irr5 → irr1 → irr6</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>dbsf_distribution_mismatch</h2>
+        <p class="description">DBSF z-score helps align genuinely different distributions.</p>
+        <p class="insight"><strong>Insight:</strong> Z-score: (x - mean) / std. Aligns distributions with different means/variances.</p>
+        <p>Expected winner: <strong>dbsf</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">irr1 → rel1 → rel2 → irr2 → irr4</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → irr1 → rel2 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → irr1 → rel2 → irr2 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>isr_steeper_decay</h2>
+        <p class="description">ISR's steeper decay (k=1) emphasizes top ranks in disjoint lists.</p>
+        <p class="insight"><strong>Insight:</strong> ISR with k=1: 1/sqrt(1+0)=1.0 at rank 0 vs 1/sqrt(1+4)=0.447 at rank 4. Much steeper than RRF's 1/(60+r). rel1 at rank 0 should dominate.</p>
+        <p>Expected winner: <strong>isr</strong> | Actual winner: <strong>borda</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">irr5 → rel1 → irr6 → irr1 → irr7</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.500</td>
+                <td class="">0.631</td>
+                <td>0.631</td>
+                <td>0.500</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">irr5 → rel1 → irr6 → irr1 → irr7</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.500</td>
+                <td class="">0.631</td>
+                <td>0.631</td>
+                <td>0.500</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → irr1 → irr2 → irr5 → irr6</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">irr5 → rel1 → irr1 → irr6 → irr7</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.500</td>
+                <td class="">0.631</td>
+                <td>0.631</td>
+                <td>0.500</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">irr5 → irr6 → rel1 → irr1 → irr7</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.333</td>
+                <td class="">0.500</td>
+                <td>0.500</td>
+                <td>0.333</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → irr5 → irr1 → irr6 → irr7</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → irr1 → irr2 → irr3 → irr5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → irr5 → irr1 → irr6 → irr2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">irr5 → rel1 → irr6 → irr1 → irr7</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.500</td>
+                <td class="">0.631</td>
+                <td>0.631</td>
+                <td>0.500</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">irr5 → rel1 → irr6 → irr1 → irr7</td>
+                <td>0.000</td>
+                <td>0.200</td>
+                <td>0.500</td>
+                <td class="">0.631</td>
+                <td>0.631</td>
+                <td>0.500</td>
+            </tr>
+            <tr class="winner">
+                <td>borda</td>
+                <td class="ranking">rel1 → irr5 → irr1 → irr6 → irr2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → irr5 → irr6 → irr1 → irr7</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>standardized_distribution_mismatch</h2>
+        <p class="description">Standardized fusion (z-score) outperforms CombSUM when distributions differ.</p>
+        <p class="insight"><strong>Insight:</strong> Z-score normalization (standardization) is more robust to distribution differences than min-max. ERANK shows 2-5% NDCG improvement.</p>
+        <p>Expected winner: <strong>standardized</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">irr1 → rel1 → rel2 → irr2 → irr4</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → irr1 → rel2 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → irr1 → rel2 → irr2 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>standardized_tight_clipping</h2>
+        <p class="description">Tight clipping range helps when moderate outliers exist.</p>
+        <p class="insight"><strong>Insight:</strong> Tighter clipping [-2, 2] vs [-3, 3] reduces outlier influence. With balanced lists (not dominated by one), tight clipping should outperform methods without clipping.</p>
+        <p>Expected winner: <strong>standardized_tight</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">outlier → rel1 → rel2 → irr3 → irr4</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → outlier → rel2 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">outlier → rel1 → rel2 → irr3 → irr4</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>additive_multi_task_ecommerce</h2>
+        <p class="description">Additive multi-task fusion (ResFlow) for e-commerce ranking.</p>
+        <p class="insight"><strong>Insight:</strong> ResFlow: additive fusion (CTR + CTCVR × 20) outperforms multiplicative for e-commerce. Task B (CTCVR) gets 20× weight.</p>
+        <p>Expected winner: <strong>additive_multi_task_1_20</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">item2 → item1 → item4 → item3 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">item2 → item1 → item3 → item4 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">item2 → item1 → item3 → item4 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">item2 → item1 → item4 → item3 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">item2 → item1 → item4 → item3 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">item2 → item3 → item4 → item1 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">item2 → item1 → item4 → item3 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">item2 → item1 → item4 → item3 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">item2 → item1 → item3 → item4 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">item2 → item1 → item4 → item3 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">item2 → item1 → item4 → item3 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">item2 → item1 → item4 → item3 → item5</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>additive_equal_weights</h2>
+        <p class="description">Equal-weight additive fusion when both tasks matter equally.</p>
+        <p class="insight"><strong>Insight:</strong> Equal weights (1.0, 1.0) when both tasks contribute equally to final ranking.</p>
+        <p>Expected winner: <strong>additive_multi_task_1_1</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr2 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr2 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr5 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr2 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>standardized_vs_dbsf</h2>
+        <p class="description">Standardized fusion with custom clipping vs fixed DBSF.</p>
+        <p class="insight"><strong>Insight:</strong> Standardized allows configurable clipping range, making it more flexible than DBSF's fixed [-3, 3].</p>
+        <p>Expected winner: <strong>standardized</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr5 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr1 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr5</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr5 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr4 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr5 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr4 → irr5 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>standardized_negative_scores</h2>
+        <p class="description">Standardized fusion handles negative scores naturally.</p>
+        <p class="insight"><strong>Insight:</strong> Z-score normalization works with any score distribution, including negative values.</p>
+        <p>Expected winner: <strong>standardized</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr3 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr3 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr3 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>additive_extreme_weights</h2>
+        <p class="description">Additive fusion with extreme weight ratios (1:100).</p>
+        <p class="insight"><strong>Insight:</strong> Extreme weights should still produce valid rankings. Task B dominates.</p>
+        <p>Expected winner: <strong>additive_multi_task_1_20</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>standardized_single_element</h2>
+        <p class="description">Standardized fusion handles single-element lists gracefully.</p>
+        <p class="insight"><strong>Insight:</strong> Single-element lists have zero variance. Z-score = 0, but fusion still works.</p>
+        <p>Expected winner: <strong>standardized</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.200</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>additive_disjoint_tasks</h2>
+        <p class="description">Additive fusion when tasks have disjoint document sets.</p>
+        <p class="insight"><strong>Insight:</strong> Disjoint tasks should interleave documents fairly.</p>
+        <p>Expected winner: <strong>additive_multi_task_1_1</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel_a1 → rel_b1 → rel_a2 → rel_b2 → irr_a1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel_a1 → rel_b1 → rel_a2 → rel_b2 → irr_a1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel_a1 → rel_b1 → rel_b2 → rel_a2 → irr_b1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel_b1 → rel_a1 → rel_a2 → rel_b2 → irr_a1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel_b1 → rel_a1 → rel_b2 → rel_a2 → irr_b1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel_b1 → rel_a1 → rel_b2 → rel_a2 → irr_b1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel_a1 → rel_b1 → rel_b2 → rel_a2 → irr_a1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel_a1 → rel_a2 → rel_b1 → rel_b2 → irr_a1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel_a1 → rel_a2 → rel_b1 → rel_b2 → irr_a1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel_b1 → rel_a1 → rel_b2 → rel_a2 → irr_b1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel_b1 → rel_a1 → rel_a2 → rel_b2 → irr_b1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel_b1 → rel_a1 → rel_b2 → rel_a2 → irr_a1</td>
+                <td>1.000</td>
+                <td>0.800</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>standardized_outlier_robustness</h2>
+        <p class="description">Standardized fusion is more robust to outliers than CombSUM.</p>
+        <p class="insight"><strong>Insight:</strong> Z-score normalization with clipping reduces outlier influence compared to min-max. With balanced lists and outliers that clip, standardized should outperform methods without clipping.</p>
+        <p>Expected winner: <strong>standardized</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">outlier → rel1 → rel2 → irr3 → irr4</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2 → irr3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → outlier → rel2 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → outlier → rel2 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → outlier → rel2 → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">outlier → rel1 → rel2 → irr3 → irr4</td>
+                <td>0.000</td>
+                <td>0.400</td>
+                <td>0.500</td>
+                <td class="">0.693</td>
+                <td>0.693</td>
+                <td>0.583</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → outlier → irr3 → irr4</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>additive_normalization_matters</h2>
+        <p class="description">Normalization method affects additive multi-task fusion results.</p>
+        <p class="insight"><strong>Insight:</strong> Z-score normalization (default) handles different distributions better than min-max. With equal weights, rel1 should win.</p>
+        <p>Expected winner: <strong>additive_multi_task_1_1</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2 → irr2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2 → irr2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2 → irr2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2 → irr2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2 → irr2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → irr1 → rel2 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="">0.920</td>
+                <td>0.920</td>
+                <td>0.833</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2 → irr2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2 → irr1 → irr2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2 → irr2 → irr1</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>standardized_many_lists</h2>
+        <p class="description">Standardized fusion scales to many input lists.</p>
+        <p class="insight"><strong>Insight:</strong> Z-score normalization works efficiently with many lists.</p>
+        <p>Expected winner: <strong>standardized</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">rel1 → rel2</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="scenario correct">
+        <h2>additive_ecommerce_funnel</h2>
+        <p class="description">E-commerce funnel: view, click, add-to-cart, purchase.</p>
+        <p class="insight"><strong>Insight:</strong> ResFlow shows additive fusion works well for e-commerce multi-task ranking.</p>
+        <p>Expected winner: <strong>additive_multi_task_1_20</strong> | Actual winner: <strong>additive_multi_task_1_1</strong></p>
+        
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Top-5 Ranking</th>
+                <th>P@1</th>
+                <th>P@5</th>
+                <th>MRR</th>
+                <th>nDCG@5</th>
+                <th>nDCG@10</th>
+                <th>AP</th>
+            </tr>
+            <tr class="">
+                <td>combmnz</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>borda</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="winner">
+                <td>additive_multi_task_1_1</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>isr</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.9</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>weighted_0.7</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>rrf</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized_tight</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>combsum</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>additive_multi_task_1_20</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>dbsf</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+            <tr class="">
+                <td>standardized</td>
+                <td class="ranking">item1 → item2 → item3</td>
+                <td>1.000</td>
+                <td>0.400</td>
+                <td>1.000</td>
+                <td class="metric-best">1.000</td>
+                <td>1.000</td>
+                <td>1.000</td>
+            </tr>
+        </table>
+    </div>
+
+    <h2>Method Descriptions</h2>
+    <table>
+        <tr><th>Method</th><th>Formula</th><th>Best For</th></tr>
+        <tr><td>rrf</td><td>Σ 1/(k + rank)</td><td>Different score scales</td></tr>
+        <tr><td>isr</td><td>Σ 1/sqrt(k + rank)</td><td>When lower ranks matter</td></tr>
+        <tr><td>combsum</td><td>Σ normalized_score</td><td>Same scale, trust scores</td></tr>
+        <tr><td>combmnz</td><td>Σ score × overlap_count</td><td>Reward overlap</td></tr>
+        <tr><td>borda</td><td>Σ (N - rank)</td><td>Voting/committee</td></tr>
+        <tr><td>dbsf</td><td>Σ z_score</td><td>Different distributions</td></tr>
+        <tr><td>weighted</td><td>w₁×s₁ + w₂×s₂</td><td>Known retriever quality</td></tr>
+        <tr><td>standardized</td><td>Σ z_score (configurable clip)</td><td>ERANK-style, robust to outliers</td></tr>
+        <tr><td>additive_multi_task</td><td>α·A + β·B</td><td>ResFlow-style, e-commerce ranking</td></tr>
+    </table>
+</body>
+</html>

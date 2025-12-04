@@ -3,8 +3,10 @@
 //! These tests verify rank fusion works correctly in real-world scenarios.
 
 use rank_fusion::{
-    borda, combmnz, combmnz_multi, combsum, rrf, rrf_into, rrf_multi, rrf_with_config, weighted,
-    weighted_multi, FusionConfig, RrfConfig, WeightedConfig,
+    additive_multi_task_multi, additive_multi_task_with_config, borda, combmnz, combmnz_multi,
+    combsum, rrf, rrf_into, rrf_multi, rrf_with_config, standardized, standardized_multi,
+    standardized_with_config, weighted, weighted_multi, AdditiveMultiTaskConfig, FusionConfig,
+    Normalization, RrfConfig, StandardizedConfig, WeightedConfig,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +93,183 @@ fn e2e_weighted_tuned() {
         WeightedConfig::new(0.1, 0.9).with_normalize(true),
     );
     assert_eq!(favor_b[0].0, "d2", "Should favor retriever B's ranking");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E2E Test: Standardized Fusion (ERANK-style)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn e2e_standardized_fusion() {
+    // Different score distributions: BM25 (high values) vs Dense (low values)
+    let bm25 = vec![("d1", 15.0), ("d2", 12.0), ("d3", 8.0), ("d4", 5.0)];
+    let dense = vec![("d2", 0.9), ("d1", 0.85), ("d5", 0.7), ("d3", 0.6)];
+
+    // Standardized should handle distribution differences better than CombSUM
+    let standardized_result =
+        standardized_with_config(&bm25, &dense, StandardizedConfig::default());
+
+    // d1 and d2 appear in both lists - should rank high
+    let top_2: Vec<_> = standardized_result
+        .iter()
+        .take(2)
+        .map(|(id, _)| *id)
+        .collect();
+    assert!(
+        top_2.contains(&"d1") || top_2.contains(&"d2"),
+        "Overlapping docs should rank high"
+    );
+
+    // Should include all unique docs
+    let unique_docs: std::collections::HashSet<_> =
+        standardized_result.iter().map(|(id, _)| *id).collect();
+    assert_eq!(unique_docs.len(), 5);
+}
+
+#[test]
+fn e2e_standardized_tight_clipping() {
+    let a = vec![("d1", 100.0), ("d2", 0.5), ("d3", 0.4)]; // Outlier
+    let b = vec![("d2", 0.9), ("d1", 0.2), ("d3", 0.8)];
+
+    // Tight clipping should reduce outlier influence
+    let tight = standardized_with_config(&a, &b, StandardizedConfig::new((-2.0, 2.0)));
+    let default = standardized_with_config(&a, &b, StandardizedConfig::default());
+
+    // Both should work, but tight clipping may change relative ordering
+    assert!(!tight.is_empty());
+    assert!(!default.is_empty());
+}
+
+#[test]
+fn e2e_standardized_multi() {
+    let a = vec![("d1", 10.0), ("d2", 8.0)];
+    let b = vec![("d2", 0.9), ("d3", 0.8)];
+    let c = vec![("d1", 0.7), ("d3", 0.6)];
+
+    let result = standardized_multi(&[&a, &b, &c], StandardizedConfig::default());
+
+    // d1 appears in a and c, d2 in a and b, d3 in b and c
+    assert_eq!(result.len(), 3);
+    let top_id = result[0].0;
+    assert!(
+        top_id == "d1" || top_id == "d2",
+        "Overlapping docs should rank high"
+    );
+}
+
+#[test]
+fn e2e_standardized_empty_inputs() {
+    let a = vec![("d1", 1.0)];
+    let empty: Vec<(&str, f32)> = vec![];
+
+    // Empty list should return just the non-empty list
+    let result = standardized(&a, &empty);
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].0, "d1");
+
+    // Both empty should return empty
+    let result2 = standardized(&empty, &empty);
+    assert!(result2.is_empty());
+}
+
+#[test]
+fn e2e_standardized_equal_scores() {
+    // All scores equal - should handle gracefully
+    let a = vec![("d1", 1.0), ("d2", 1.0), ("d3", 1.0)];
+    let b = vec![("d1", 1.0), ("d2", 1.0)];
+
+    let result = standardized(&a, &b);
+    // Should not panic, should return all docs
+    assert!(!result.is_empty());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E2E Test: Additive Multi-Task Fusion (ResFlow-style)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn e2e_additive_multi_task_ecommerce() {
+    // E-commerce scenario: CTR + CTCVR
+    let ctr = vec![
+        ("item1", 0.05),
+        ("item2", 0.03),
+        ("item3", 0.01),
+        ("item4", 0.02),
+    ];
+    let ctcvr = vec![
+        ("item1", 0.02), // High conversion
+        ("item2", 0.01),
+        ("item3", 0.005),
+        ("item4", 0.008),
+    ];
+
+    // ResFlow optimal: CTR + CTCVR × 20
+    let config = AdditiveMultiTaskConfig::new((1.0, 20.0));
+    let result = additive_multi_task_with_config(&ctr, &ctcvr, config);
+
+    // item1 should win (high CTR + high CTCVR × 20)
+    assert_eq!(result[0].0, "item1");
+    assert!(result[0].1 > result[1].1); // Should have higher score
+}
+
+#[test]
+fn e2e_additive_multi_task_equal_weights() {
+    let a = vec![("d1", 0.9), ("d2", 0.7), ("d3", 0.5)];
+    let b = vec![("d1", 0.8), ("d2", 0.6), ("d4", 0.4)];
+
+    let config = AdditiveMultiTaskConfig::new((1.0, 1.0));
+    let result = additive_multi_task_with_config(&a, &b, config);
+
+    // d1 appears in both with high scores - should rank #1
+    assert_eq!(result[0].0, "d1");
+}
+
+#[test]
+fn e2e_additive_multi_task_different_normalizations() {
+    let a = vec![("d1", 10.0), ("d2", 5.0)];
+    let b = vec![("d1", 0.9), ("d2", 0.5)];
+
+    // Z-score normalization (default)
+    let config_z =
+        AdditiveMultiTaskConfig::new((1.0, 1.0)).with_normalization(Normalization::ZScore);
+    let result_z = additive_multi_task_with_config(&a, &b, config_z);
+
+    // Min-max normalization
+    let config_mm =
+        AdditiveMultiTaskConfig::new((1.0, 1.0)).with_normalization(Normalization::MinMax);
+    let result_mm = additive_multi_task_with_config(&a, &b, config_mm);
+
+    // Both should work
+    assert!(!result_z.is_empty());
+    assert!(!result_mm.is_empty());
+}
+
+#[test]
+fn e2e_additive_multi_task_multi() {
+    let task1 = vec![("d1", 0.9), ("d2", 0.7)];
+    let task2 = vec![("d1", 0.8), ("d3", 0.6)];
+    let task3 = vec![("d2", 0.5), ("d3", 0.4)];
+
+    let weighted = vec![(&task1[..], 1.0), (&task2[..], 2.0), (&task3[..], 0.5)];
+
+    let config = AdditiveMultiTaskConfig::default();
+    let result = additive_multi_task_multi(&weighted, config);
+
+    // d1 appears in task1 and task2 with high weights - should rank high
+    assert!(!result.is_empty());
+    let top_id = result[0].0;
+    assert_eq!(top_id, "d1");
+}
+
+#[test]
+fn e2e_additive_multi_task_empty() {
+    let a = vec![("d1", 1.0)];
+    let empty: Vec<(&str, f32)> = vec![];
+
+    let config = AdditiveMultiTaskConfig::default();
+    let result = additive_multi_task_with_config(&a, &empty, config);
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].0, "d1");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -6,47 +6,93 @@ This document provides integration examples for common RAG/search stacks.
 
 ### Using with LangChain
 
+**Note**: LangChain APIs may vary by version. This example shows the general pattern.
+
 ```python
-from langchain.retrievers import BM25Retriever, VectorStoreRetriever
 import rank_fusion
 
-# Get results from multiple retrievers
-bm25_results = bm25_retriever.get_relevant_documents(query)
-vector_results = vector_retriever.get_relevant_documents(query)
+# Option 1: Using LangChain retrievers (version-dependent API)
+# from langchain.retrievers import BM25Retriever
+# from langchain.vectorstores import VectorStore
 
-# Convert to rank-fusion format
-bm25_ranked = [(doc.metadata["id"], doc.score) for doc in bm25_results]
-vector_ranked = [(doc.metadata["id"], doc.score) for doc in vector_results]
+# Get results from multiple retrievers
+# bm25_retriever = BM25Retriever.from_documents(documents)
+# vector_store = VectorStore.from_documents(documents, embeddings)
+# 
+# bm25_results = bm25_retriever.get_relevant_documents(query)
+# vector_results = vector_store.as_retriever().get_relevant_documents(query)
+
+# Option 2: Generic pattern (works across LangChain versions)
+# Extract document IDs and scores from LangChain results
+def extract_ranked_list(langchain_results):
+    """Convert LangChain results to rank-fusion format."""
+    ranked = []
+    for i, doc in enumerate(langchain_results):
+        doc_id = doc.metadata.get("id", doc.metadata.get("source", str(i)))
+        # LangChain may not have scores - use rank position as proxy
+        score = getattr(doc, "score", 1.0 / (i + 1))
+        ranked.append((doc_id, score))
+    return ranked
+
+# Example usage (replace with actual LangChain calls):
+# bm25_results = bm25_retriever.get_relevant_documents(query)
+# vector_results = vector_retriever.get_relevant_documents(query)
+# 
+# bm25_ranked = extract_ranked_list(bm25_results)
+# vector_ranked = extract_ranked_list(vector_results)
 
 # Fuse results
-fused = rank_fusion.rrf(bm25_ranked, vector_ranked, k=60)
+# fused = rank_fusion.rrf(bm25_ranked, vector_ranked, k=60)
 
 # Convert back to LangChain format
-fused_docs = [
-    get_document_by_id(id) for id, _ in fused[:10]  # Top 10
-]
+# fused_docs = [get_document_by_id(id) for id, _ in fused[:10]]  # Top 10
 ```
 
 ### Using with LlamaIndex
 
+**Note**: LlamaIndex APIs vary by version. This example shows the general pattern.
+
 ```python
-from llama_index import VectorStoreIndex, KeywordTableIndex
 import rank_fusion
 
-# Get results from multiple indexes
-vector_results = vector_index.retrieve(query, top_k=50)
-keyword_results = keyword_index.retrieve(query, top_k=50)
+# Option 1: LlamaIndex v0.9+ (query engine API)
+# from llama_index.core import VectorStoreIndex, KeywordTableIndex
+# 
+# vector_index = VectorStoreIndex.from_documents(documents)
+# keyword_index = KeywordTableIndex.from_documents(documents)
+# 
+# vector_query_engine = vector_index.as_query_engine(similarity_top_k=50)
+# keyword_query_engine = keyword_index.as_query_engine(similarity_top_k=50)
+# 
+# vector_response = vector_query_engine.query(query)
+# keyword_response = keyword_query_engine.query(query)
+# 
+# # Extract results
+# vector_ranked = [(node.node_id, node.score) for node in vector_response.source_nodes]
+# keyword_ranked = [(node.node_id, node.score) for node in keyword_response.source_nodes]
 
-# Convert to rank-fusion format
-vector_ranked = [(r.node.node_id, r.score) for r in vector_results]
-keyword_ranked = [(r.node.node_id, r.score) for r in keyword_results]
+# Option 2: Generic pattern (works across LlamaIndex versions)
+def extract_llamaindex_results(response_or_nodes):
+    """Convert LlamaIndex results to rank-fusion format."""
+    ranked = []
+    # Handle both query response and direct node lists
+    nodes = getattr(response_or_nodes, "source_nodes", response_or_nodes)
+    for i, node in enumerate(nodes):
+        node_id = getattr(node, "node_id", getattr(node, "id", str(i)))
+        score = getattr(node, "score", 1.0 / (i + 1))
+        ranked.append((node_id, score))
+    return ranked
+
+# Example usage:
+# vector_ranked = extract_llamaindex_results(vector_response)
+# keyword_ranked = extract_llamaindex_results(keyword_response)
 
 # Fuse results
-fused = rank_fusion.rrf_multi([vector_ranked, keyword_ranked], k=60)
+# fused = rank_fusion.rrf_multi([vector_ranked, keyword_ranked], k=60)
 
 # Get top-k fused documents
-top_k_ids = [id for id, _ in fused[:10]]
-fused_nodes = [get_node_by_id(id) for id in top_k_ids]
+# top_k_ids = [id for id, _ in fused[:10]]
+# fused_nodes = [get_node_by_id(id) for id in top_k_ids]
 ```
 
 ### Using with Elasticsearch/OpenSearch
@@ -175,6 +221,8 @@ struct FusionResponse {
 }
 
 async fn fuse(req: web::Json<FusionRequest>) -> Result<web::Json<FusionResponse>> {
+    use rank_fusion::{rrf_multi, RrfConfig};
+    
     let slices: Vec<&[(String, f32)]> = req.lists.iter()
         .map(|v| v.as_slice())
         .collect();
