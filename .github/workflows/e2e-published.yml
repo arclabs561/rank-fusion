@@ -240,35 +240,46 @@ jobs:
           const rankFusionModule = require('@arclabs561/rank-fusion');
           
           // WASM packages from wasm-pack export an async init function
-          // Handle both sync and async exports
+          // The default export is the init function that returns the module
           async function testWasm() {
               let rankFusion;
               
-              // Check if it's an async init function (typical wasm-pack pattern)
+              // wasm-pack pattern: default export is async init function
               if (typeof rankFusionModule === 'function') {
                   rankFusion = await rankFusionModule();
               } else if (rankFusionModule.default && typeof rankFusionModule.default === 'function') {
                   rankFusion = await rankFusionModule.default();
               } else {
+                  // Fallback: try direct access (unlikely for wasm-pack)
                   rankFusion = rankFusionModule;
               }
               
-              console.log('Available exports:', Object.keys(rankFusion).slice(0, 20));
+              console.log('✅ WASM module initialized');
+              console.log('Available functions:', Object.keys(rankFusion).filter(k => typeof rankFusion[k] === 'function').slice(0, 10));
               
               // Test RRF
               const list1 = [["doc1", 0.9], ["doc2", 0.8], ["doc3", 0.7]];
               const list2 = [["doc2", 0.95], ["doc1", 0.85], ["doc3", 0.75]];
               
-              // Try different possible function names
-              let rrf = rankFusion.rrf || rankFusion.RRF || rankFusion.rank_fusion_rrf;
-              
-              if (!rrf || typeof rrf !== 'function') {
-                  console.log('⚠️  rrf function not found, checking all exports...');
-                  console.log('Available functions:', Object.keys(rankFusion).filter(k => typeof rankFusion[k] === 'function'));
+              // rrf is exported directly from wasm_bindgen
+              if (!rankFusion.rrf || typeof rankFusion.rrf !== 'function') {
+                  console.log('⚠️  rrf function not found');
+                  console.log('Available exports:', Object.keys(rankFusion).slice(0, 20));
                   throw new Error('rrf function not found in WASM package');
               }
               
-              const fused = rrf(list1, list2);
+              // rrf returns Result<JsValue, JsValue> - unwrap if needed
+              const fusedResult = rankFusion.rrf(list1, list2);
+              
+              // Handle Result type (wasm_bindgen returns Result)
+              let fused;
+              if (fusedResult && typeof fusedResult === 'object' && 'Ok' in fusedResult) {
+                  fused = fusedResult.Ok;
+              } else if (Array.isArray(fusedResult)) {
+                  fused = fusedResult;
+              } else {
+                  throw new Error(`Unexpected rrf return type: ${typeof fusedResult}`);
+              }
               
               if (!fused || fused.length === 0) {
                   throw new Error("RRF should return results");
@@ -283,15 +294,15 @@ jobs:
               console.log(`✅ Published WASM package works: RRF returned ${fused.length} results`);
               
               // Test other functions if available
-              const combmnz = rankFusion.combmnz || rankFusion.CombMNZ || rankFusion.rank_fusion_combmnz;
-              if (combmnz && typeof combmnz === 'function') {
-                  const result = combmnz(list1, list2);
-                  if (result.length !== 3) {
-                      throw new Error(`CombMNZ should return 3 results, got ${result.length}`);
+              if (rankFusion.combmnz && typeof rankFusion.combmnz === 'function') {
+                  const combmnzResult = rankFusion.combmnz(list1, list2);
+                  const combmnzFused = Array.isArray(combmnzResult) ? combmnzResult : (combmnzResult?.Ok || combmnzResult);
+                  if (combmnzFused.length !== 3) {
+                      throw new Error(`CombMNZ should return 3 results, got ${combmnzFused.length}`);
                   }
                   console.log("✅ CombMNZ works");
               } else {
-                  console.log("ℹ️  CombMNZ not available (may not be exported)");
+                  console.log("ℹ️  CombMNZ not available");
               }
               
               console.log("✅ All WASM E2E tests passed");
