@@ -2459,6 +2459,8 @@ impl FusionStrategy {
             Self::CombMnz => combmnz_multi(runs, FusionConfig::default()),
             Self::Weighted { weights, normalize } => {
                 if runs.len() != weights.len() {
+                    // Mismatched lengths: return empty rather than panic
+                    // Callers should validate inputs before calling fuse()
                     return Vec::new();
                 }
                 let lists: Vec<_> = runs
@@ -2466,6 +2468,8 @@ impl FusionStrategy {
                     .zip(weights.iter())
                     .map(|(run, &w)| (*run, w))
                     .collect();
+                // Unwrap is safe here because we validate weights in weighted_multi
+                // If weights sum to zero, returns empty Vec (graceful degradation)
                 weighted_multi(&lists, *normalize, None).unwrap_or_default()
             }
         }
