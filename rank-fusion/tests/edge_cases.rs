@@ -72,7 +72,7 @@ fn test_duplicate_document_ids() {
     
     let fused = rrf(&list1, &list2);
     // doc1 should have higher score (appears twice in list1)
-    assert!(fused.iter().any(|(id, _)| id == "doc1"));
+    assert!(fused.iter().any(|(id, _)| *id == "doc1"));
 }
 
 #[test]
@@ -211,7 +211,7 @@ fn test_additive_multi_task_weights() {
     let fused = additive_multi_task_with_config(&task1, &task2, config);
     
     // item2 should rank high (appears in both, task2 weighted heavily)
-    assert!(fused.iter().any(|(id, _)| id == "item2"));
+    assert!(fused.iter().any(|(id, _)| *id == "item2"));
 }
 
 #[test]
@@ -282,7 +282,7 @@ fn test_explainability_edge_cases() {
     let explained = rrf_explain(&lists, &retriever_ids, Default::default());
     
     // doc1 should only have contribution from retriever1
-    let doc1 = explained.iter().find(|r| r.id.as_str() == "doc1").unwrap();
+    let doc1 = explained.iter().find(|r| r.id == "doc1").unwrap();
     assert_eq!(doc1.explanation.sources.len(), 1);
     assert_eq!(doc1.explanation.consensus_score, 0.5); // 1/2 retrievers
 }
