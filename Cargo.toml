@@ -3,7 +3,7 @@ members = ["rank-fusion", "rank-fusion-python", "evals", "test-e2e-local"]
 resolver = "2"
 # Default members excludes evals to avoid rank-eval dependency in CI
 # evals can be built separately when rank-eval is available
-default-members = ["rank-fusion", "rank-fusion-python"]
+default-members = ["rank-fusion"]
 
 [workspace.package]
 version = "0.1.20"

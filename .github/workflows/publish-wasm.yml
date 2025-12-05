@@ -24,16 +24,13 @@ jobs:
           
           echo "✅ Version check complete: $ROOT_VERSION"
       - name: Run tests
-        run: |
-          # Exclude evals from workspace to avoid rank-eval dependency issue
-          # evals is not needed for WASM publishing
-          cargo test -p rank-fusion --workspace --exclude rank-fusion-evals
+        run: cargo test -p rank-fusion
       - name: Test WASM feature compiles
-        run: cargo check --features wasm -p rank-fusion --workspace --exclude rank-fusion-evals
+        run: cargo check --features wasm -p rank-fusion
       - name: Run clippy
-        run: cargo clippy --workspace --exclude rank-fusion-evals -- -D warnings
+        run: cargo clippy -p rank-fusion -- -D warnings
       - name: Check formatting
-        run: cargo fmt --check --all -- --exclude rank-fusion-evals || cargo fmt --check
+        run: cargo fmt --check -p rank-fusion
 
   publish-npm:
     needs: validate
