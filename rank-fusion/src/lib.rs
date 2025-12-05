@@ -284,6 +284,10 @@ pub mod explain {
 #[doc(hidden)]
 pub mod wasm;
 
+// Re-export wasm_bindgen functions for wasm-pack
+#[cfg(feature = "wasm")]
+pub use wasm::*;
+
 /// Strategy module for runtime fusion method selection.
 ///
 /// Enables dynamic selection of fusion methods without trait objects.
