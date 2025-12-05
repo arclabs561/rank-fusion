@@ -73,13 +73,19 @@ npm install @arclabs561/rank-fusion
 **Usage in Node.js:**
 
 ```javascript
-const { rrf } = require('@arclabs561/rank-fusion');
+const rankFusion = require('@arclabs561/rank-fusion');
+
+// wasm-pack with --target nodejs exports functions directly
+// Functions are available immediately after require()
+const { rrf } = rankFusion;
 
 // Fuse two ranked lists
 const bm25 = [["d1", 12.5], ["d2", 11.0]];
 const dense = [["d2", 0.9], ["d3", 0.8]];
 
-const fused = rrf(bm25, dense, 60);
+// rrf returns Result<JsValue, JsValue> - unwrap if needed
+const result = rrf(bm25, dense, 60);
+const fused = result.Ok || result; // Handle Result type
 // Result: [["d2", 0.033], ["d1", 0.016], ["d3", 0.016]]
 // d2 ranks highest (appears in both lists)
 ```
