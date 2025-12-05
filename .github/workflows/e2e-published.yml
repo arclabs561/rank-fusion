@@ -237,49 +237,38 @@ jobs:
       - name: Test installed package
         run: |
           node << 'NODEEOF'
-          const rankFusionModule = require('@arclabs561/rank-fusion');
+          const rankFusion = require('@arclabs561/rank-fusion');
           
-          // WASM packages from wasm-pack export an async init function
-          // The default export is the init function that returns the module
-          async function testWasm() {
-              let rankFusion;
-              
-              // wasm-pack pattern: default export is async init function
-              if (typeof rankFusionModule === 'function') {
-                  rankFusion = await rankFusionModule();
-              } else if (rankFusionModule.default && typeof rankFusionModule.default === 'function') {
-                  rankFusion = await rankFusionModule.default();
-              } else {
-                  // Fallback: try direct access (unlikely for wasm-pack)
-                  rankFusion = rankFusionModule;
-              }
-              
-              console.log('✅ WASM module initialized');
-              console.log('Available functions:', Object.keys(rankFusion).filter(k => typeof rankFusion[k] === 'function').slice(0, 10));
-              
-              // Test RRF
-              const list1 = [["doc1", 0.9], ["doc2", 0.8], ["doc3", 0.7]];
-              const list2 = [["doc2", 0.95], ["doc1", 0.85], ["doc3", 0.75]];
-              
-              // rrf is exported directly from wasm_bindgen
-              if (!rankFusion.rrf || typeof rankFusion.rrf !== 'function') {
-                  console.log('⚠️  rrf function not found');
-                  console.log('Available exports:', Object.keys(rankFusion).slice(0, 20));
-                  throw new Error('rrf function not found in WASM package');
-              }
-              
-              // rrf returns Result<JsValue, JsValue> - unwrap if needed
-              const fusedResult = rankFusion.rrf(list1, list2);
-              
-              // Handle Result type (wasm_bindgen returns Result)
-              let fused;
-              if (fusedResult && typeof fusedResult === 'object' && 'Ok' in fusedResult) {
-                  fused = fusedResult.Ok;
-              } else if (Array.isArray(fusedResult)) {
-                  fused = fusedResult;
-              } else {
-                  throw new Error(`Unexpected rrf return type: ${typeof fusedResult}`);
-              }
+          // wasm-pack with --target nodejs exports functions directly
+          // Functions are available immediately after require()
+          // No async init needed for nodejs target
+          
+          console.log('✅ WASM package loaded');
+          console.log('Available exports:', Object.keys(rankFusion).filter(k => !k.startsWith('__')).slice(0, 15));
+          
+          // Test RRF
+          const list1 = [["doc1", 0.9], ["doc2", 0.8], ["doc3", 0.7]];
+          const list2 = [["doc2", 0.95], ["doc1", 0.85], ["doc3", 0.75]];
+          
+          // rrf should be exported directly
+          if (!rankFusion.rrf || typeof rankFusion.rrf !== 'function') {
+              console.log('⚠️  rrf function not found');
+              console.log('All exports:', Object.keys(rankFusion));
+              throw new Error('rrf function not found in WASM package');
+          }
+          
+          // rrf returns Result<JsValue, JsValue> - unwrap if needed
+          const fusedResult = rankFusion.rrf(list1, list2);
+          
+          // Handle Result type (wasm_bindgen returns Result)
+          let fused;
+          if (fusedResult && typeof fusedResult === 'object' && 'Ok' in fusedResult) {
+              fused = fusedResult.Ok;
+          } else if (Array.isArray(fusedResult)) {
+              fused = fusedResult;
+          } else {
+              throw new Error(`Unexpected rrf return type: ${typeof fusedResult}`);
+          }
               
               if (!fused || fused.length === 0) {
                   throw new Error("RRF should return results");
