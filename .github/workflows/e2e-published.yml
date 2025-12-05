@@ -436,7 +436,9 @@ jobs:
               const list1 = {json.dumps([[d[0], d[1]] for d in list1])};
               const list2 = {json.dumps([[d[0], d[1]] for d in list2])};
               const result = rankFusion.rrf(list1, list2);
-              console.log(JSON.stringify(result));
+              // Handle Result type (wasm_bindgen returns Result)
+              const unwrapped = result.Ok || result;
+              console.log(JSON.stringify(unwrapped));
               """
               node_result = subprocess.run(
                   ['node', '-e', node_script],
