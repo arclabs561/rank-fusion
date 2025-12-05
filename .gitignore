@@ -20,3 +20,6 @@ evals/eval_results.json
 # Build artifacts
 **/pkg/
 *.wasm
+
+# Archive directory for temporary analysis files
+.archive/
