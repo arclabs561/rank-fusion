@@ -1,0 +1,35 @@
+---
+title: "rank-fusion Specific Rules"
+id: fusion-specific
+description: "Repository-specific rules for rank-fusion"
+priority: 50
+alwaysApply: true
+---
+
+# rank-fusion Specific Rules
+
+These rules extend the shared base rules with fusion-specific guidelines.
+
+## Algorithm-Specific
+
+- **RRF k parameter**: Default to 60 unless specified otherwise
+- **Score normalization**: Prefer RRF over normalization-based fusion
+- **Evaluation**: Always validate `eval_results.json` structure before processing
+
+## Data Sources
+
+- Use `evals/eval_results.json` for real evaluation data
+- Benchmark data from `cargo bench` output
+- TREC format files in `evals/datasets/`
+
+## Testing
+
+- E2E tests in `test-e2e-local/` must pass before merging
+- Integration tests verify fusion + eval compatibility
+- Performance benchmarks track algorithm efficiency
+
+## Documentation
+
+- Algorithm formulas in `docs/` with LaTeX rendering
+- Visualization scripts in `hack/viz/` use real eval data
+- README includes algorithm comparison visualizations

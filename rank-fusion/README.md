@@ -257,6 +257,32 @@ The k parameter controls how sharply top positions dominate. Cormack et al. (200
 - k=60: Default for most hybrid search scenarios
 - k=100+: When lower-ranked items are still valuable, want broad agreement
 
+### Statistical Analysis (Real Data)
+
+Comprehensive statistical analysis using real evaluation data from 25 scenarios:
+
+![RRF Statistical Analysis](../hack/viz/rrf_statistical_analysis.png)
+
+**Four-panel analysis:**
+- **Top-left**: RRF score distribution by rank position (k=10, 60, 100)
+- **Top-right**: NDCG@10 distribution with gamma fitting (statistical rigor like games/tenzi)
+- **Bottom-left**: Box plot statistical comparison across methods
+- **Bottom-right**: k parameter sensitivity with confidence intervals
+
+**Method Performance Comparison:**
+
+![RRF Method Comparison](../hack/viz/rrf_method_comparison.png)
+
+Real evaluation results comparing RRF vs other fusion methods using violin plots showing distributions of NDCG@10, Precision@10, and MRR.
+
+**Hypothesis Testing:**
+
+![RRF Hypothesis Testing](../hack/viz/rrf_hypothesis_testing.png)
+
+Statistical significance testing (ANOVA, paired t-tests) showing RRF's performance advantage over other methods.
+
+**Data Source**: Real metrics from `evals/eval_results.json` (25 evaluation scenarios). See [Visualizations](../hack/viz/RRF_VISUALIZATIONS.md) for complete analysis.
+
 **Visual example**:
 
 ```

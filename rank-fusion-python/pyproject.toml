@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "rank-fusion"
-version = "0.1.19"
+version = "0.1.20"
 description = "Python bindings for rank-fusion — rank fusion algorithms for hybrid search"
 readme = "README.md"
 requires-python = ">=3.7"
